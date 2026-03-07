@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Live Detection Dashboard</title>
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <style>
+        body { font-family: sans-serif; margin: 20px; }
+        .container { display: flex; gap: 20px; }
+        .video-box {
+            width: 640px;
+            height: 360px;
+            background-color: #000;
+            border: 2px solid #333;
+            position: relative;
+        }
+        .stats-box { flex: 1; padding: 10px; border: 1px solid #ddd; }
+        .detection-overlay {
+            position: absolute;
+            border: 2px solid red;
+            color: white;
+            font-size: 12px;
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>DeepStream Kafka Dashboard</h1>
+
+    <div class="container">
+        <!-- Video Canvas (Simulated) -->
+        <div class="video-box" id="videoCanvas">
+            <!-- Overlay elements will be added here -->
+            <p style="color: white; text-align: center; margin-top: 150px;">
+                Video Stream Overlay<br>
+                (Visualize Bounding Boxes)
+            </p>
+        </div>
+
+        <!-- Statistics -->
+        <div class="stats-box">
+            <h3>Detection Stats</h3>
+            <p>Frame: <span id="frameNum">-</span></p>
+            <p>Timestamp: <span id="timestamp">-</span></p>
+            <div id="plotlyChart"></div>
+            <h4>Recent Logs:</h4>
+            <ul id="logs" style="height: 200px; overflow-y: scroll; font-size: 12px;"></ul>
+        </div>
+    </div>
+
+    <script>
+        const socket = io();
+        const videoCanvas = document.getElementById('videoCanvas');
+        const logsList = document.getElementById('logs');
+        const frameNumSpan = document.getElementById('frameNum');
+
+        // Connect to Socket.IO
+        socket.on('connect', () => {
+            console.log("Connected to WebSocket server");
+            addLog("System connected.");
+        });
+
+        // Listen for new detections
+        socket.on('new_detection', (data) => {
+            // Update Text Stats
+            frameNumSpan.innerText = data.frame_num;
+            document.getElementById('timestamp').innerText = new Date(data.timestamp * 1000).toLocaleTimeString();
+
+            // Clear old bounding boxes
+            const existingBoxes = document.querySelectorAll('.detection-overlay');
+            existingBoxes.forEach(box => box.remove());
+
+            // Draw new bounding boxes
+            // Note: Assuming coordinates are relative (0-1) or pixel based.
+            // Adjust scaling if needed. Here assuming 1920x1080 source scaled to 640x360 canvas.
+            const scaleX = 640 / 1920;
+            const scaleY = 360 / 1080;
+
+            data.detections.forEach(det => {
+                const box = document.createElement('div');
+                box.className = 'detection-overlay';
+
+                // detection format: [x, y, w, h] (top-left)
+                box.style.left = (det.bbox[0] * scaleX) + 'px';
+                box.style.top = (det.bbox[1] * scaleY) + 'px';
+                box.style.width = (det.bbox[2] * scaleX) + 'px';
+                box.style.height = (det.bbox[3] * scaleY) + 'px';
+
+                box.innerText = `${det.label} (${(det.confidence * 100).toFixed(0)}%)`;
+
+                videoCanvas.appendChild(box);
+            });
+
+            addLog(`Frame ${data.frame_num}: Detected ${data.detections.length} objects`);
+        });
+
+        function addLog(msg) {
+            const li = document.createElement('li');
+            li.innerText = msg;
+            logsList.prepend(li);
+            if (logsList.children.length > 20) logsList.lastChild.remove();
+        }
+
+    </script>
+</body>
+</html>
