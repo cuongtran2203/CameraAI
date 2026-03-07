@@ -1,0 +1,31 @@
+%YAML:1.0
+
+NvDCF:
+  # Search Region parameters
+  searchRegionPaddingScale: 1
+
+  # Target Size parameters
+  minTargetArea: 20
+
+  # Motion Model parameters
+  usePathStabilizer: 1
+
+  # Feature Extractor parameters
+  featureImgSizeLevel: 2
+
+  # Similarity Metric parameters
+  maxTargetsPerStream: 100
+  filterLr: 0.1
+  filterChannelWeightsLr: 0.1
+  gaussianSigma: 0.75
+  minTrackerConfidence: 0.7
+
+  # Data Association parameters
+  maxShadowTrackingAge: 30    # Max frames to keep tracking if object is lost
+  probationAge: 3            # Frames to validate a new track
+  earlyTerminationAge: 1     # Frames to stop tracking if low confidence
+
+# DeepSORT specific (if switching algorithm)
+DeepSORT:
+  reidFeatureSize: 256
+  maxMatchingScore: 2.0

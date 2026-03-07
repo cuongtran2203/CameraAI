@@ -1,0 +1,26 @@
+[property]
+gpu-id=0
+net-scale-factor=1
+# Model path (Example: Action Recognition ONNX model)
+# model-file=../../models/action_recognition/resnet18_3d.onnx
+model-engine-file=../../models/action_recognition/resnet18_3d.onnx_b1_gpu0_fp16.engine
+labelfile-path=../../models/action_recognition/labels.txt
+
+# Type 2 = Classifier (Secondary GIE)
+network-type=2
+process-mode=2 # 1=Primary, 2=Secondary
+
+# Operate on objects of class 0 (Person) from Primary Detector
+operate-on-gie-id=1
+operate-on-class-ids=0
+
+# Batch size should match number of streams or higher
+batch-size=1
+network-mode=2 # 0=FP32, 1=INT8, 2=FP16
+num-detected-classes=5 # Example: Walking, Standing, Sitting, Falling, Fighting
+interval=0
+gie-unique-id=2
+output-blob-names=softmax
+
+[class-attrs-all]
+threshold=0.5
