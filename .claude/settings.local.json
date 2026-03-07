@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "WebSearch",
+      "Bash(mv app_s/admin_login/code.html app_s/login.html &&\nmv app_s/executive_dashboard_desktop/code.html app_s/dashboard.html &&\nmv app_s/live_camera_streaming_grid_view/code.html app_s/live-view.html &&\nmv app_s/camera_ai_configuration/code.html app_s/camera-config.html &&\nmv app_s/camera_configuration_rtsp_setup/code.html app_s/rtsp-setup.html &&\nmv app_s/customer_flow_analytics_desktop/code.html app_s/customer-analytics.html &&\nmv app_s/food_qc_monitor_desktop/code.html app_s/food-qc.html &&\nmv app_s/kitchen_traffic_analytics/code.html app_s/kitchen-analytics.html &&\nmv app_s/receptionist_performance_dashboard/code.html app_s/receptionist-dashboard.html &&\nmv app_s/staff_attendance_report_desktop/code.html app_s/staff-attendance.html &&\nmv app_s/staff_performance_desktop/code.html app_s/staff-performance.html)"
+    ]
+  }
+}

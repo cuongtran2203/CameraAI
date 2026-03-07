@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html class="dark" lang="en">
+<head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>Camera Analyst - Live Monitoring</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+    <script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#ec5b13",
+                        "background-light": "#f8f6f6",
+                        "background-dark": "#221610",
+                         "surface-dark": "#2a1d17",
+                         "border-dark": "#3d2b22",
+                    },
+                    fontFamily: {
+                        "display": ["Public Sans"]
+                    },
+                    borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+    <style>
+        body { font-family: 'Public Sans', sans-serif; }
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #3d2c24; border-radius: 10px; }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-slate-100 min-h-screen overflow-hidden">
+<div class="layout-container flex flex-col h-screen">
+    <!-- Top Navigation Bar -->
+    <header class="flex items-center justify-between px-8 py-4 bg-background-light dark:bg-background-dark border-b border-slate-200 dark:border-primary/20 shrink-0">
+        <div class="flex items-center gap-8">
+            <div class="flex items-center gap-3 text-primary">
+                <span class="material-symbols-outlined text-3xl font-bold">videocam</span>
+                <h2 class="text-slate-900 dark:text-slate-100 text-xl font-bold leading-tight tracking-tight uppercase">Camera Analyst</h2>
+            </div>
+             <nav class="flex items-center gap-6">
+                <a class="text-slate-500 dark:text-slate-400 text-sm font-medium hover:text-primary transition-colors" href="#">Overview</a>
+                <a class="text-slate-500 dark:text-slate-400 text-sm font-medium hover:text-primary transition-colors" href="#">Analytics</a>
+                <a class="text-slate-500 dark:text-slate-400 text-sm font-medium hover:text-primary transition-colors" href="#">Reports</a>
+                <a class="text-slate-500 dark:text-slate-400 text-sm font-medium hover:text-primary transition-colors" href="#">System Status</a>
+            </nav>
+        </div>
+        <div class="flex items-center gap-6">
+            <div class="relative flex items-center">
+                <span class="material-symbols-outlined absolute left-3 text-slate-400">search</span>
+                <input class="bg-slate-100 dark:bg-primary/5 border-none rounded-xl pl-10 pr-4 py-2 text-sm focus:ring-1 focus:ring-primary w-64" placeholder="Search operations..."/>
+            </div>
+            <div class="flex gap-3">
+                <button class="p-2 rounded-xl bg-slate-100 dark:bg-primary/10 text-slate-600 dark:text-primary hover:bg-primary hover:text-white transition-all">
+                    <span class="material-symbols-outlined">notifications</span>
+                </button>
+                <button class="p-2 rounded-xl bg-slate-100 dark:bg-primary/10 text-slate-600 dark:text-primary hover:bg-primary hover:text-white transition-all">
+                    <span class="material-symbols-outlined">settings</span>
+                </button>
+            </div>
+            <div class="flex items-center gap-3 pl-4 border-l border-slate-200 dark:border-primary/20">
+                <div class="text-right">
+                    <p class="text-xs font-bold uppercase tracking-wider text-primary">Executive</p>
+                    <p class="text-sm font-medium">Alex Chen</p>
+                </div>
+                <div class="w-10 h-10 rounded-full bg-primary/20 border-2 border-primary flex items-center justify-center overflow-hidden">
+                    <img alt="Executive profile photo" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDldET3gW8wT318zdo5FNpFDIEA9cAhW_9zQCGyazdpyz4afyDu5oCzZtaZeyCKnTncrFPZN9ZrAKaOwLpDwihBJUNcmn72F48k80kGctAr-9DtdQPLqj5nuaemGkRB1l5D5g5KbnQ8doOOd66mX7MJT5VxgmOII5fbIzUt6wGyultMZ9XxccINvpUMQl-9yLGNbNPHdP3Xc-PxYkpzdfHuknWP3bFm6hF-L4HUGsYO9bfyolOOQ4Lmu816xEp7jxI4I0vw8Mf5rdI"/>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="flex flex-1 overflow-hidden p-6 gap-6">
+        <!-- Left Sidebar Navigation -->
+        <aside class="w-64 flex flex-col gap-2 shrink-0 border-r border-slate-200 dark:border-primary/20 pr-4">
+
+            <div class="flex flex-col gap-2">
+                 <p class="text-xs font-bold text-slate-400 uppercase px-4 mt-2 mb-1">General</p>
+                 <a href="dashboard.html" class="flex items-center gap-3 px-4 py-3 rounded-xl text-slate-600 dark:text-slate-400 hover:bg-primary/10 hover:text-primary transition-all">
+                    <span class="material-symbols-outlined">dashboard</span>
+                    <span>Dashboard</span>
+                </a>
+                <a href="live-view.html" class="flex items-center gap-3 px-4 py-3 rounded-xl bg-primary text-white font-semibold">
+                    <span class="material-symbols-outlined">videocam</span>
+                    <span>Live Monitoring</span>
+                </a>
+            </div>
+
+            <div class="flex flex-col gap-2 mt-2">
+                 <p class="text-xs font-bold text-slate-400 uppercase px-4 mb-1">Analytics</p>
+                <a href="customer-analytics.html" class="flex items-center gap-3 px-4 py-3 rounded-xl text-slate-600 dark:text-slate-400 hover:bg-primary/10 hover:text-primary transition-all">
+                    <span class="material-symbols-outlined">groups</span>
+                    <span>Customer Flow</span>
+                </a>
+                <a href="kitchen-analytics.html" class="flex items-center gap-3 px-4 py-3 rounded-xl text-slate-600 dark:text-slate-400 hover:bg-primary/10 hover:text-primary transition-all">
+                    <span class="material-symbols-outlined">soup_kitchen</span>
+                    <span>Kitchen Traffic</span>
+                </a>
+                 <a href="receptionist-dashboard.html" class="flex items-center gap-3 px-4 py-3 rounded-xl text-slate-600 dark:text-slate-400 hover:bg-primary/10 hover:text-primary transition-all">
+                    <span class="material-symbols-outlined">support_agent</span>
+                    <span>Receptionist Perf.</span>
+                </a>
+            </div>
+
+            <div class="flex flex-col gap-2 mt-2">
+                 <p class="text-xs font-bold text-slate-400 uppercase px-4 mb-1">Staff</p>
+                 <a href="staff-attendance.html" class="flex items-center gap-3 px-4 py-3 rounded-xl text-slate-600 dark:text-slate-400 hover:bg-primary/10 hover:text-primary transition-all">
+                    <span class="material-symbols-outlined">badge</span>
+                    <span>Attendance</span>
+                </a>
+                 <a href="staff-performance.html" class="flex items-center gap-3 px-4 py-3 rounded-xl text-slate-600 dark:text-slate-400 hover:bg-primary/10 hover:text-primary transition-all">
+                    <span class="material-symbols-outlined">trending_up</span>
+                    <span>Performance</span>
+                </a>
+            </div>
+
+             <div class="flex flex-col gap-2 mt-2">
+                 <p class="text-xs font-bold text-slate-400 uppercase px-4 mb-1">Operations</p>
+                <a href="food-qc.html" class="flex items-center gap-3 px-4 py-3 rounded-xl text-slate-600 dark:text-slate-400 hover:bg-primary/10 hover:text-primary transition-all">
+                    <span class="material-symbols-outlined">fact_check</span>
+                    <span>Food QC</span>
+                </a>
+            </div>
+
+            <div class="flex flex-col gap-2 mt-2">
+                 <p class="text-xs font-bold text-slate-400 uppercase px-4 mb-1">Configuration</p>
+                <a href="camera-config.html" class="flex items-center gap-3 px-4 py-3 rounded-xl text-slate-600 dark:text-slate-400 hover:bg-primary/10 hover:text-primary transition-all">
+                    <span class="material-symbols-outlined">settings_video_camera</span>
+                    <span>Camera AI</span>
+                </a>
+                 <a href="rtsp-setup.html" class="flex items-center gap-3 px-4 py-3 rounded-xl text-slate-600 dark:text-slate-400 hover:bg-primary/10 hover:text-primary transition-all">
+                    <span class="material-symbols-outlined">router</span>
+                    <span>RTSP Setup</span>
+                </a>
+            </div>
+
+            <div class="mt-auto p-4">
+                 <a href="login.html" class="flex items-center gap-3 px-4 py-3 rounded-xl text-slate-600 dark:text-slate-400 hover:bg-red-500/10 hover:text-red-500 transition-all">
+                    <span class="material-symbols-outlined">logout</span>
+                    <span>Logout</span>
+                </a>
+            </div>
+
+        </aside>
+
+        <!-- Content Area -->
+        <div class="flex-1 flex overflow-hidden rounded-2xl border border-slate-200 dark:border-primary/10 bg-white dark:bg-[#1a120e]">
+             <!-- Video Grid Column -->
+             <div class="flex-1 flex flex-col p-4 overflow-y-auto custom-scrollbar">
+                <!-- Layout Controls and Title -->
+                <div class="flex items-center justify-between mb-4">
+                    <div class="flex items-center gap-4">
+                        <h2 class="text-lg font-bold flex items-center gap-2">
+                        <span class="w-2 h-2 bg-primary rounded-full animate-pulse"></span>
+                                                    Live Monitoring
+                                                </h2>
+                        <span class="px-2 py-0.5 rounded bg-primary/20 text-primary text-[10px] font-bold uppercase tracking-wider">Active Stream</span>
+                    </div>
+                    <div class="flex bg-slate-200 dark:bg-surface-dark rounded-xl p-1">
+                        <button class="px-4 py-1.5 text-xs font-bold rounded-lg hover:text-primary transition-colors">1x1</button>
+                        <button class="px-4 py-1.5 text-xs font-bold rounded-lg bg-white dark:bg-background-dark text-primary shadow-sm">2x2</button>
+                        <button class="px-4 py-1.5 text-xs font-bold rounded-lg hover:text-primary transition-colors">3x3</button>
+                    </div>
+                </div>
+
+                <!-- 2x2 Video Grid -->
+                <div class="grid grid-cols-2 gap-4 flex-1">
+                    <!-- Feed 1 -->
+                    <div class="relative group rounded-xl overflow-hidden border border-slate-200 dark:border-border-dark bg-black aspect-video">
+                        <img class="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity" src="https://lh3.googleusercontent.com/aida-public/AB6AXuC0b9WawoWXe5ot1S0J7RtS0g1_TxbE8BudzoMig9npTfVFtfh0Cvxl25gVfrp4rgA7XQTtvGbOSdzDF1NRAENWupOvYHfg1htPg46TFVkseaKqZ4I1eO9sds4bUolJUQC48P5dWAXQopT7nESFREQoqJJbOzsKCOW7esFqPxcx9c-dbCre8kur0A1OrSag9ddzA2Z_rss2E4YULoS8D20GQqe9tcC43EJxBC8MUOq2RKpCtarE8MzLbogHkQluByyfrenEzmqqv34"/>
+                         <div class="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/40"></div>
+                        <div class="absolute top-3 left-3 flex gap-2">
+                            <span class="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-black/60 backdrop-blur-md text-[10px] font-bold text-white border border-white/10">
+                                <span class="w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse"></span> REC
+                            </span>
+                            <span class="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-primary/80 backdrop-blur-md text-[10px] font-bold text-white">
+                                <span class="material-symbols-outlined text-xs">psychology</span> AI ACTIVE
+                            </span>
+                        </div>
+                        <div class="absolute bottom-3 left-3 flex flex-col">
+                            <h3 class="text-white font-bold text-sm">Main Entrance - Cam 01</h3>
+                            <p class="text-white/60 text-[10px]">Zone: Perimeter A</p>
+                        </div>
+                    </div>
+                     <!-- Feed 2 -->
+                    <div class="relative group rounded-xl overflow-hidden border border-slate-200 dark:border-border-dark bg-black aspect-video">
+                        <img class="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAqoT-OTQWdq7QCQj634QBA8yIYc4nltzJB2hXYXCMrsZ-N2PeCzkCVjqtb51Hmc4dDcttv5qbVlB25mi-FEwu2K-H-egfjIhmsDkQ81OG2kXDQa5Q7qy8_mcsQK0uJ-r-vxyELbyGZ5AmObs2YhmTTTGXuMbxJZFojQq6Ui-1yVlz3HiSMpeh86_dIr1popCrSwhpnA4TmMexkc__M5xT_zQws-7MrJtREPtbUCDsBU-o9_xACVxBJDZWtRlltcSaLgEhWbYvspP4"/>
+                        <div class="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/40"></div>
+                        <div class="absolute bottom-3 left-3 flex flex-col">
+                             <h3 class="text-white font-bold text-sm">Front Lobby - Cam 02</h3>
+                             <p class="text-white/60 text-[10px]">Zone: Interior Public</p>
+                        </div>
+                    </div>
+                    <!-- Feed 3 -->
+                    <div class="relative group rounded-xl overflow-hidden border border-slate-200 dark:border-border-dark bg-black aspect-video">
+                         <img class="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBE5Dz-ARWCvhVyR7cdl-jpIpGAIpYLCMTaequXVA-aQa04As3d458Ae1BF3GI1YNneIsWVk_0avR9eSTOqnRpbp3B5LkGOmfpSVKfkoVjkkPVdSC_edBwQFj3Xvy5Kp8ghPOKUfz20cKtGIKV5LU9p5aD9o_QO4DFaVZ5IgSswpZ_aDLG7jPqueLntz196s0ja4N6CNuUVUktySbPqdRNNrtW4zy0dij5Zz2nXw0IeUkA-YtOgaomHCbr5GJ_k2fr91INhWsNTlzA"/>
+                         <div class="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/40"></div>
+                         <div class="absolute bottom-3 left-3 flex flex-col">
+                             <h3 class="text-white font-bold text-sm">Staff Kitchen - Cam 03</h3>
+                             <p class="text-white/60 text-[10px]">Zone: Service Area</p>
+                        </div>
+                    </div>
+                    <!-- Feed 4 -->
+                    <div class="relative group rounded-xl overflow-hidden border border-slate-200 dark:border-border-dark bg-black aspect-video">
+                         <img class="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCqqwpj17YZPcsY1f39v_hKzEdinOcBm7QWgi9uk07u1JO7Msd-Rc7JMv0iqnUtPDdTV2OtftT_3XHoJpwH5iRDeW8ye8bRMUf9xVLYPWef2qFajzSghqH29Gra2ymsJI0-F9PdgVgOdQbnbSREm2JKss2TYhr3lANsMh1o1Fz3NpZFcU0LIKeLfoc1CMpp_slrpoftsh96l8_vaLfnq7ZgN9NBj9oK62Mzt_urZakMy_JkiemPWjp70aEzcRd3qmYPNjmaBzkCqZ4"/>
+                        <div class="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/40"></div>
+                        <div class="absolute bottom-3 left-3 flex flex-col">
+                             <h3 class="text-white font-bold text-sm">North Parking - Cam 04</h3>
+                             <p class="text-white/60 text-[10px]">Zone: Perimeter B</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Bottom Selector -->
+                <div class="mt-4 shrink-0">
+                   <div class="flex items-center justify-between mb-2">
+                        <h3 class="text-xs font-bold uppercase text-slate-400 tracking-widest">Available Streams</h3>
+                        <button class="text-primary text-xs font-bold hover:underline">View All</button>
+                    </div>
+                    <div class="flex gap-4 overflow-x-auto pb-2 custom-scrollbar">
+                         <div class="min-w-[160px] h-24 rounded-xl relative overflow-hidden cursor-pointer border-2 border-primary shadow-lg">
+                             <img class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCcd3DrfjNi0h9FmrT8Cihumf2X4muI4fT6rE_tFBuFd6JlKCRJAdT-yBloNVX6UBwAWlAMTbEEfI6sTIG6m82XJjfmUKSK1NN1DlYz6FvjO9zUqhZ0Xl9EkLAuyScAoBLHS9kyuxk28B912x5yZdcsdRS7vFUUAtPBy726F3MfnGpW7lTdaU_KDPw66lp9AeL1pATyVgtYQ-ylSC4wghlUimDbdNwQ5iJPVlwPpd9o_RPg1LX0tPi2dO4YTIigKckZqFzWhIhawk4"/>
+                             <div class="absolute inset-0 bg-black/40 flex flex-col justify-end p-2">
+                                <p class="text-[10px] font-bold text-white leading-tight">Main Entrance</p>
+                                <p class="text-[8px] text-primary font-bold">ACTIVE</p>
+                            </div>
+                         </div>
+                         <div class="min-w-[160px] h-24 rounded-xl relative overflow-hidden cursor-pointer border border-transparent hover:border-slate-400 dark:hover:border-border-dark transition-all">
+                             <img class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDKDB3d71Wg8lBkO3Pdh50eNrje-NbXYQHYRGburb7v5Y6T2ZSiCaiq-7QPI5RzZjopmxB_xW0FuFsOJBtwP4LHzXhCx8V-OCRLPZUdec2qzUrPul6j2Z2M2icm1F9NK7uPICMtFOYQUCXb59D0YiDH-b9-y0h_Kg1Of0dT5k5_3yMWBCG_YfNCrV_blORKmPRm12oUhKyrEjAymf2debKSii-u-Yv9pf2l6GEA7X_QWBu-YW9pnTcBgz1E2xMOqFiARfPDZ4GxcRg"/>
+                             <div class="absolute inset-0 bg-black/40 flex flex-col justify-end p-2">
+                                <p class="text-[10px] font-bold text-white leading-tight">Staff Kitchen</p>
+                                <p class="text-[8px] text-slate-300">IDLE</p>
+                            </div>
+                         </div>
+                         <div class="min-w-[160px] h-24 rounded-xl relative overflow-hidden cursor-pointer border border-transparent hover:border-slate-400 dark:hover:border-border-dark transition-all">
+                             <img class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuC-vASf6TrOR99MLyNvGjF0xdrFMirTEvBlKUMU1VVba6J5DCsTY0yjItj7vMzYiW234dgaB-sy8Iuxfsd9oN5w29DwRaWMUKvu4ILSvyV9LRg0zuRjH4g6eKXVBjhmBqvQwjMqcGMRlsUcVj3f7uB_Y87iS483rtsCVX3jOAvLihtNggH507k7HpxlaCcv1qRu3800aouTDjKknGeFgHPczLM4BCOH7nEbb2AzyXreZ_zWldVybi-0yAw9AnEoXBkNehMRGCPUnoY"/>
+                             <div class="absolute inset-0 bg-black/40 flex flex-col justify-end p-2">
+                                <p class="text-[10px] font-bold text-white leading-tight">Front Lobby</p>
+                                <p class="text-[8px] text-slate-300">IDLE</p>
+                            </div>
+                         </div>
+                         <div class="min-w-[160px] h-24 rounded-xl relative overflow-hidden cursor-pointer border border-transparent hover:border-slate-400 dark:hover:border-border-dark transition-all">
+                             <img class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAqyjkboN_CNCi-JQzLK8C2fCPzh2D-lH_ShDH9V2opoRq8DehH3f-VQ_ppyduuUtrwaQSE6PkT8p2xqEBQ2Vjso7y0IvbAFdWjVpTNVDtwD5TbM8NexQJeAI9C2DVeBMskQVwV3FvaqIBQYhDyXMvR7ChxhcUOZpWJx4UFl3gl5UWhW4cBTlLHWNc3w4aK1Iz8lvmXTZuHA8b3r8XURy8vfok5DG2DDAt7-S_5viS5khfJuLInL0g2HAxz2Uh172a6_WIXOCsX6n4"/>
+                             <div class="absolute inset-0 bg-black/40 flex flex-col justify-end p-2">
+                                <p class="text-[10px] font-bold text-white leading-tight">North Parking</p>
+                                <p class="text-[8px] text-slate-300">IDLE</p>
+                            </div>
+                         </div>
+                         <div class="min-w-[160px] h-24 rounded-xl relative overflow-hidden cursor-pointer border border-transparent hover:border-slate-400 dark:hover:border-border-dark transition-all">
+                             <img class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBppoUAdnT9TvzGT2FzIDks_7asVnE50NmeG3EAqFZm9sxnDhsHfqJvvM_c5ddx1V1TT8qyvrurrQGcCzmJ5x28jqu_fpa-GfXTl_Yh_YmOIKp1kHwtU4xEJYIZTP6OJWgQ9ppjSaNvahqQP5tNcjUkA0o2kZjHyxMIg8NyJ7rdrcnf_W50frjBET-pipIXmWEYzN864amaTq0cg3kQWgFtczKp3KYt2LoOxqXONXVDTyGSqeVPkhG3LXlPPX0kl3VLXIOX4fqjG1I"/>
+                             <div class="absolute inset-0 bg-black/40 flex flex-col justify-end p-2">
+                                <p class="text-[10px] font-bold text-white leading-tight">Loading Dock</p>
+                                <p class="text-[8px] text-slate-300">IDLE</p>
+                            </div>
+                         </div>
+                    </div>
+                </div>
+             </div>
+
+             <!-- Right Sidebar: Recent Detections -->
+             <aside class="w-80 border-l border-slate-200 dark:border-primary/10 bg-slate-50 dark:bg-[#1a120e] flex flex-col shrink-0">
+                  <div class="p-4 border-b border-slate-200 dark:border-primary/10 flex items-center justify-between">
+                        <h3 class="font-bold text-sm">Recent AI Detections</h3>
+                        <span class="bg-primary/20 text-primary text-[10px] font-bold px-2 py-0.5 rounded">LIVE</span>
+                    </div>
+                    <div class="flex-1 overflow-y-auto custom-scrollbar p-4 space-y-4">
+                         <!-- Alerts -->
+                         <div class="p-3 rounded-xl bg-primary/10 border-l-4 border-primary">
+                            <div class="flex justify-between items-start mb-1">
+                                <span class="text-[10px] font-bold text-primary uppercase">Security Alert</span>
+                                <span class="text-[10px] text-slate-500 font-mono">14:22:45</span>
+                            </div>
+                            <h4 class="text-sm font-bold text-slate-900 dark:text-white leading-tight">Unrecognized Personnel</h4>
+                            <p class="text-xs text-slate-600 dark:text-slate-400 mt-1">Zone B-4: Unauthorized access attempt detected at rear exit.</p>
+                            <div class="mt-2 flex items-center gap-2">
+                                <button class="px-3 py-1 bg-primary text-white text-[10px] font-bold rounded-lg uppercase tracking-wider">Acknowledge</button>
+                            </div>
+                         </div>
+                         <div class="p-3 rounded-xl bg-slate-100 dark:bg-background-dark border border-slate-200 dark:border-border-dark">
+                            <div class="flex justify-between items-start mb-1">
+                                <span class="text-[10px] font-bold text-emerald-500 uppercase">Staff Recognition</span>
+                                <span class="text-[10px] text-slate-500 font-mono">14:21:12</span>
+                            </div>
+                            <h4 class="text-sm font-bold text-slate-900 dark:text-white leading-tight">Staff ID: #4492 (Maria S.)</h4>
+                            <p class="text-xs text-slate-600 dark:text-slate-400 mt-1">Main Entrance: Verified and logged.</p>
+                        </div>
+                        <div class="p-3 rounded-xl bg-slate-100 dark:bg-background-dark border border-slate-200 dark:border-border-dark">
+                            <div class="flex justify-between items-start mb-1">
+                                <span class="text-[10px] font-bold text-blue-500 uppercase">QC Alert</span>
+                                <span class="text-[10px] text-slate-500 font-mono">14:18:03</span>
+                            </div>
+                            <h4 class="text-sm font-bold text-slate-900 dark:text-white leading-tight">Food QC: Temp Check</h4>
+                            <p class="text-xs text-slate-600 dark:text-slate-400 mt-1">Staff Kitchen: Area cleaning check recommended by AI.</p>
+                        </div>
+                        <div class="p-3 rounded-xl bg-slate-100 dark:bg-background-dark border border-slate-200 dark:border-border-dark">
+                            <div class="flex justify-between items-start mb-1">
+                                <span class="text-[10px] font-bold text-amber-500 uppercase">Traffic Analytics</span>
+                                <span class="text-[10px] text-slate-500 font-mono">14:15:30</span>
+                            </div>
+                            <h4 class="text-sm font-bold text-slate-900 dark:text-white leading-tight">Crowd Density Alert</h4>
+                            <p class="text-xs text-slate-600 dark:text-slate-400 mt-1">Front Lobby: High traffic volume detected (25+ persons).</p>
+                        </div>
+                        <div class="p-3 rounded-xl bg-slate-100 dark:bg-background-dark border border-slate-200 dark:border-border-dark opacity-80">
+                            <div class="flex justify-between items-start mb-1">
+                                <span class="text-[10px] font-bold text-emerald-500 uppercase">Staff Recognition</span>
+                                <span class="text-[10px] text-slate-500 font-mono">14:12:00</span>
+                            </div>
+                            <h4 class="text-sm font-bold text-slate-900 dark:text-white leading-tight">Staff ID: #1022 (James K.)</h4>
+                            <p class="text-xs text-slate-600 dark:text-slate-400 mt-1">Loading Dock: Verified and logged.</p>
+                        </div>
+                    </div>
+                     <!-- Detection Analytics Summary -->
+                    <div class="p-4 border-t border-slate-200 dark:border-primary/10 bg-slate-50 dark:bg-background-dark">
+                        <h4 class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">Detection Summary (1h)</h4>
+                        <div class="grid grid-cols-2 gap-2">
+                            <div class="bg-white dark:bg-surface-dark p-2 rounded-lg border border-slate-200 dark:border-border-dark">
+                                <p class="text-[10px] text-slate-500">Detections</p>
+                                <p class="text-lg font-bold">1,204</p>
+                            </div>
+                            <div class="bg-white dark:bg-surface-dark p-2 rounded-lg border border-slate-200 dark:border-border-dark">
+                                <p class="text-[10px] text-slate-500">Critical</p>
+                                <p class="text-lg font-bold text-primary">3</p>
+                            </div>
+                        </div>
+                    </div>
+             </aside>
+        </div>
+    </main>
+</div>
+</body>
+</html>
