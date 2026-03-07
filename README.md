@@ -57,7 +57,7 @@ The application includes the following dashboards and interfaces (located in `ap
 
 ```
 AI_camera/
-├── app_s/                  # Web application source files (HTML, assets)
+├── app/                  # Web application source files (HTML, assets)
 │   ├── admin_login/
 │   ├── camera_ai_configuration/
 │   ├── customer_flow_analytics_desktop/
