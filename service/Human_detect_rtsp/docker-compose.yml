@@ -1,0 +1,62 @@
+services:
+  deepstream:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: deepstream_yolo
+    network_mode: host
+    stdin_open: true
+    tty: true
+    restart: unless-stopped
+    environment:
+      NVIDIA_VISIBLE_DEVICES: all
+      NVIDIA_DRIVER_CAPABILITIES: all
+    gpus: all
+    volumes:
+      - ./:/workspace
+    command: >
+      python3 /workspace/app.py
+      --input file:///workspace/videos/test.mp4
+      --kafka-bootstrap 127.0.0.1:9092
+      --kafka-topic human_tracking
+      --kafka-interval-ms 1000
+
+  deepstream_raw:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: deepstream_raw
+    network_mode: host
+    restart: unless-stopped
+    environment:
+      NVIDIA_VISIBLE_DEVICES: all
+      NVIDIA_DRIVER_CAPABILITIES: all
+    gpus: all
+    volumes:
+      - ./:/workspace
+    command: >
+      python3 /workspace/raw.py
+      --input file:///workspace/videos/test.mp4
+
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.6.0
+    container_name: zookeeper
+    network_mode: host
+    restart: unless-stopped
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+
+  kafka:
+    image: confluentinc/cp-kafka:7.6.0
+    container_name: kafka
+    depends_on:
+      - zookeeper
+    network_mode: host
+    restart: unless-stopped
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: 127.0.0.1:2181
+      KAFKA_LISTENERS: PLAINTEXT://127.0.0.1:9092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://127.0.0.1:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
