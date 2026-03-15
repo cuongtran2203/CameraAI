@@ -1,0 +1,291 @@
+"""
+Kafka Producer & Consumer Services
+Camera Analyst System
+"""
+import json
+import asyncio
+import logging
+from datetime import datetime
+from typing import Optional, Callable, Dict, Any
+from uuid import uuid4
+
+from kafka import KafkaProducer, KafkaConsumer
+from kafka.errors import KafkaError
+
+from app.db.database import settings
+
+logger = logging.getLogger(__name__)
+
+
+# =====================================================
+# KAFKA TOPICS
+# =====================================================
+
+class KafkaTopics:
+    """Kafka topic names"""
+    # Commands - Frontend -> AI
+    CAMERA_COMMANDS = "camera.commands"
+    AI_CONFIG = "ai.config"
+
+    # Results - AI -> Backend
+    AI_FACE_DETECTIONS = "ai.face.detections"
+    AI_ACTION_DETECTIONS = "ai.action.detections"
+    AI_FOOD_DETECTIONS = "ai.food.detections"
+    AI_CUSTOMER_DETECTIONS = "ai.customer.detections"
+
+    # Aggregated
+    AI_PROCESSED = "ai.processed"
+
+
+# =====================================================
+# KAFKA PRODUCER
+# =====================================================
+
+class KafkaProducerService:
+    """
+    Kafka Producer - Gửi message từ Backend -> AI
+    """
+
+    _instance: Optional['KafkaProducerService'] = None
+    _producer: Optional[KafkaProducer] = None
+
+    def __new__(cls):
+        if cls._instance is None:
+            cls._instance = super().__new__(cls)
+        return cls._instance
+
+    def __init__(self):
+        if self._producer is None:
+            self._connect()
+
+    def _connect(self):
+        """Connect to Kafka"""
+        try:
+            self._producer = KafkaProducer(
+                bootstrap_servers=settings.KAFKA_BOOTSTRAP_SERVERS,
+                value_serializer=lambda v: json.dumps(v, default=str).encode('utf-8'),
+                key_serializer=lambda k: k.encode('utf-8') if k else None,
+                acks='all',
+                retries=3,
+                max_in_flight_requests_per_connection=1,
+                compression_type='gzip'
+            )
+            logger.info(f"Kafka producer connected to {settings.KAFKA_BOOTSTRAP_SERVERS}")
+        except Exception as e:
+            logger.error(f"Failed to connect Kafka producer: {e}")
+            self._producer = None
+
+    async def send_command(
+        self,
+        camera_id: str,
+        command: str,
+        options: Optional[Dict[str, Any]] = None
+    ) -> bool:
+        """
+        Gửi command xuống AI
+
+        Args:
+            camera_id: ID của camera
+            command: Lệnh (START_STREAM, STOP_STREAM, RESTART)
+            options: Các tùy chọn bổ sung
+
+        Returns:
+            True nếu gửi thành công
+        """
+        message = {
+            "message_id": str(uuid4()),
+            "command": command,
+            "camera_id": camera_id,
+            "timestamp": datetime.utcnow().isoformat(),
+            "options": options or {}
+        }
+
+        try:
+            if self._producer:
+                future = self._producer.send(
+                    KafkaTopics.CAMERA_COMMANDS,
+                    key=camera_id,
+                    value=message
+                )
+                # Wait for send to complete
+                future.get(timeout=10)
+                logger.info(f"Sent command {command} for camera {camera_id}")
+                return True
+            else:
+                logger.warning("Kafka producer not connected")
+                return False
+        except Exception as e:
+            logger.error(f"Failed to send command: {e}")
+            return False
+
+    async def send_ai_config(
+        self,
+        camera_id: str,
+        config: Dict[str, Any]
+    ) -> bool:
+        """Gửi AI config cho camera"""
+        message = {
+            "camera_id": camera_id,
+            "config": config,
+            "timestamp": datetime.utcnow().isoformat()
+        }
+
+        try:
+            if self._producer:
+                future = self._producer.send(
+                    KafkaTopics.AI_CONFIG,
+                    key=camera_id,
+                    value=message
+                )
+                future.get(timeout=10)
+                logger.info(f"Sent AI config for camera {camera_id}")
+                return True
+            return False
+        except Exception as e:
+            logger.error(f"Failed to send AI config: {e}")
+            return False
+
+    def close(self):
+        """Close producer"""
+        if self._producer:
+            self._producer.close()
+            self._producer = None
+
+
+# =====================================================
+# KAFKA CONSUMER
+# =====================================================
+
+class KafkaConsumerService:
+    """
+    Kafka Consumer - Nhận message từ AI -> Backend
+    """
+
+    def __init__(self):
+        self._consumers: Dict[str, KafkaConsumer] = {}
+        self._running = False
+
+    def _create_consumer(self, topic: str, group_id: str = "backend-consumer") -> KafkaConsumer:
+        """Create a Kafka consumer for a topic"""
+        return KafkaConsumer(
+            topic,
+            bootstrap_servers=settings.KAFKA_BOOTSTRAP_SERVERS,
+            value_deserializer=lambda m: json.loads(m.decode('utf-8')),
+            key_deserializer=lambda k: k.decode('utf-8') if k else None,
+            group_id=group_id,
+            auto_offset_reset='latest',
+            enable_auto_commit=True,
+            consumer_timeout_ms=1000
+        )
+
+    async def start_consuming(
+        self,
+        handlers: Dict[str, Callable[[Dict], Any]]
+    ):
+        """
+        Start consuming messages từ multiple topics
+
+        Args:
+            handlers: Dict mapping topic -> handler function
+        """
+        self._running = True
+        tasks = []
+
+        for topic, handler in handlers.items():
+            consumer = self._create_consumer(topic)
+            self._consumers[topic] = consumer
+            task = asyncio.create_task(self._consume_loop(topic, consumer, handler))
+            tasks.append(task)
+
+        logger.info(f"Started consuming topics: {list(handlers.keys())}")
+
+        # Wait for all tasks
+        await asyncio.gather(*tasks, return_exceptions=True)
+
+    async def _consume_loop(
+        self,
+        topic: str,
+        consumer: KafkaConsumer,
+        handler: Callable[[Dict], Any]
+    ):
+        """Consume loop for a single topic"""
+        while self._running:
+            try:
+                for message in consumer:
+                    if not self._running:
+                        break
+                    try:
+                        await handler(message.value)
+                    except Exception as e:
+                        logger.error(f"Error handling message from {topic}: {e}")
+            except Exception as e:
+                logger.error(f"Consumer error for {topic}: {e}")
+                await asyncio.sleep(1)
+
+    def stop(self):
+        """Stop all consumers"""
+        self._running = False
+        for consumer in self._consumers.values():
+            consumer.close()
+        self._consumers.clear()
+        logger.info("Kafka consumers stopped")
+
+
+# =====================================================
+# HANDLER FUNCTIONS
+# =====================================================
+
+async def handle_face_detection(message: Dict):
+    """Handle face detection message from AI"""
+    # TODO: Save to database
+    # - Parse message
+    # - Find or create staff_face record
+    # - Create attendance record if check-in/check-out
+    logger.info(f"Face detection: {message.get('camera_id')}")
+
+
+async def handle_action_detection(message: Dict):
+    """Handle action detection message from AI"""
+    # TODO: Save to database
+    # - Parse actions
+    # - Create staff_action records
+    # - Update daily_staff_performance
+    logger.info(f"Action detection: {message.get('camera_id')}")
+
+
+async def handle_food_detection(message: Dict):
+    """Handle food detection message from AI"""
+    # TODO: Save to database
+    # - Parse food detections
+    # - Create food_qc_result records
+    logger.info(f"Food detection: {message.get('camera_id')}")
+
+
+async def handle_customer_detection(message: Dict):
+    """Handle customer detection message from AI"""
+    # TODO: Save to database
+    # - Parse customer events
+    # - Create customer_event records
+    # - Update hourly/daily stats
+    logger.info(f"Customer detection: {message.get('camera_id')}")
+
+
+# =====================================================
+# HELPER FUNCTIONS
+# =====================================================
+
+def get_producer() -> KafkaProducerService:
+    """Get Kafka producer singleton"""
+    return KafkaProducerService()
+
+
+async def send_camera_command(camera_id: str, command: str) -> bool:
+    """Helper to send camera command"""
+    producer = get_producer()
+    return await producer.send_command(camera_id, command)
+
+
+async def send_ai_config(camera_id: str, config: Dict) -> bool:
+    """Helper to send AI config"""
+    producer = get_producer()
+    return await producer.send_ai_config(camera_id, config)
