@@ -23,8 +23,9 @@ def _load_dotenv(dotenv_path: str | Path = ".env") -> None:
             os.environ[key] = val
 
 
-# Prefer loading the centralized config file if it exists (e.g. /Config/.env).
-config_env = Path(__file__).resolve().parents[2] / "Config" / ".env"
+# Prefer loading the centralized config file if it exists (e.g. /service/Config/.env).
+service_root = Path(__file__).resolve().parents[1]
+config_env = service_root / "Config" / ".env"
 local_env = Path(__file__).resolve().parent / ".env"
 
 if config_env.is_file():
@@ -33,7 +34,8 @@ else:
     _load_dotenv(local_env)
 
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
-VLM_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
+VLM_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.0-flash")
+OPENAI_VISION_MODEL = os.getenv("OPENAI_VISION_MODEL", VLM_MODEL)
 
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 

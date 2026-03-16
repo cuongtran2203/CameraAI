@@ -23,8 +23,9 @@ def _load_dotenv(dotenv_path: str | Path = ".env") -> None:
             os.environ[key] = val
 
 
-# Prefer loading the centralized config file if it exists (e.g. /Config/.env).
-config_env = Path(__file__).resolve().parents[2] / "Config" / ".env"
+# Prefer loading the centralized config file if it exists (e.g. /service/Config/.env).
+service_root = Path(__file__).resolve().parents[1]
+config_env = service_root / "Config" / ".env"
 local_env = Path(__file__).resolve().parent / ".env"
 
 if config_env.is_file():

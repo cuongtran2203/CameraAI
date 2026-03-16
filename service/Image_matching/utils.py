@@ -1,7 +1,7 @@
 import io
 import json
 import base64
-from typing import Dict, Any
+from typing import List, Dict, Any
 
 import faiss
 import numpy as np
@@ -9,8 +9,8 @@ import torch
 from PIL import Image
 from fastapi import HTTPException
 
-from model import model, preprocess, tokenizer, client, DEVICE, VLM_MODEL
-from config import W_IMG, W_DENSE
+from model import model, preprocess, tokenizer, client, DEVICE, OPENAI_VISION_MODEL
+from config import W_IMG, W_DENSE, W_SPARSE
 
 
 def l2_normalize(vec: np.ndarray) -> np.ndarray:
@@ -68,24 +68,70 @@ def encode_text(text: str) -> np.ndarray:
     return text_features[0].detach().cpu().numpy().astype(np.float32)
 
 
-def fuse_features(image_vec: np.ndarray, dense_vec: np.ndarray) -> np.ndarray:
-    fused = (W_IMG * image_vec) + (W_DENSE * dense_vec)
+def encode_text_list(texts: List[str]) -> List[np.ndarray]:
+    clean = [t.strip().lower() for t in texts if t.strip()]
+    if not clean:
+        return []
+
+    tokens = tokenizer(clean).to(DEVICE)
+    with torch.no_grad():
+        text_features = model.encode_text(tokens)
+        text_features = text_features / text_features.norm(dim=-1, keepdim=True)
+
+    return [feat.detach().cpu().numpy().astype(np.float32) for feat in text_features]
+
+
+def fuse_features(
+    image_vec: np.ndarray,
+    dense_vec: np.ndarray,
+    sparse_vec: np.ndarray
+) -> np.ndarray:
+    fused = (W_IMG * image_vec) + (W_DENSE * dense_vec) + (W_SPARSE * sparse_vec)
     return l2_normalize(fused.astype(np.float32))
 
 
-def call_vlm_caption(image: Image.Image) -> Dict[str, Any]:
+def ingredient_similarity(ingredients_a: List[str], ingredients_b: List[str]) -> float:
+    if not ingredients_a or not ingredients_b:
+        return 0.0
+
+    emb_a = encode_text_list(ingredients_a)
+    emb_b = encode_text_list(ingredients_b)
+
+    if not emb_a or not emb_b:
+        return 0.0
+
+    mat_a = np.stack(emb_a).astype("float32")
+    mat_b = np.stack(emb_b).astype("float32")
+
+    faiss.normalize_L2(mat_a)
+    faiss.normalize_L2(mat_b)
+
+    index_b = faiss.IndexFlatIP(mat_b.shape[1])
+    index_b.add(mat_b)
+    scores_ab, _ = index_b.search(mat_a, 1)
+
+    index_a = faiss.IndexFlatIP(mat_a.shape[1])
+    index_a.add(mat_a)
+    scores_ba, _ = index_a.search(mat_b, 1)
+
+    return float((scores_ab.mean() + scores_ba.mean()) / 2.0)
+
+
+def call_vlm_vision(image: Image.Image) -> Dict[str, Any]:
     image_url = pil_to_data_url(image)
 
     prompt = """
-        You are analyzing a food image for fine-grained image matching.
+        You are analyzing a food image for fine-grained food retrieval.
 
         Return ONLY valid JSON with this exact schema:
         {
-        "dense_caption": "one detailed sentence describing the dish, cooking style, visible ingredients, side items, sauces, and plating"
+        "dense_caption": "one detailed sentence describing the dish, cooking style, side items, plating, and visible ingredients",
+        "ingredients": ["ingredient or food item 1", "ingredient or food item 2", "ingredient or food item 3"]
         }
 
         Rules:
         - Focus only on visible food.
+        - Ingredients should be short phrases.
         - No markdown.
         - No extra keys.
         - No explanation outside JSON.
@@ -93,7 +139,7 @@ def call_vlm_caption(image: Image.Image) -> Dict[str, Any]:
 
     try:
         response = client.chat.completions.create(
-            model=VLM_MODEL,
+            model=OPENAI_VISION_MODEL,
             messages=[
                 {
                     "role": "user",
@@ -103,7 +149,7 @@ def call_vlm_caption(image: Image.Image) -> Dict[str, Any]:
                     ],
                 }
             ],
-            temperature=0,
+            temperature=0
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"VLM request failed: {str(e)}")
@@ -122,29 +168,37 @@ def call_vlm_caption(image: Image.Image) -> Dict[str, Any]:
         )
 
     dense_caption = str(data.get("dense_caption", "")).strip()
+    ingredients = data.get("ingredients", [])
 
-    return {
-        "dense_caption": dense_caption
-    }
+    if not isinstance(ingredients, list):
+        ingredients = []
 
-import time
-def analyze_food_image(image: Image.Image) -> Dict[str, Any]:
-    # Input byte 64 is to much to process (fix later)
-    # start_time = time.time()
-    vlm_result = call_vlm_caption(image)
-    # end_time = time.time()
-    # print(f"VLM captioning time: {end_time - start_time:.2f} seconds")
-
-    dense_caption = vlm_result["dense_caption"]
-
-    image_vec = encode_image(image)
-    dense_vec = encode_text(dense_caption)
-
-    fused_vec = fuse_features(image_vec, dense_vec)
+    ingredients = [str(x).strip().lower() for x in ingredients if str(x).strip()]
 
     return {
         "dense_caption": dense_caption,
+        "ingredients": ingredients
+    }
+
+
+def analyze_food_image(image: Image.Image) -> Dict[str, Any]:
+    vlm_result = call_vlm_vision(image)
+
+    dense_caption = vlm_result["dense_caption"]
+    ingredients = vlm_result["ingredients"]
+    sparse_caption = ", ".join(ingredients)
+
+    image_vec = encode_image(image)
+    dense_vec = encode_text(dense_caption)
+    sparse_vec = encode_text(sparse_caption)
+
+    fused_vec = fuse_features(image_vec, dense_vec, sparse_vec)
+
+    return {
+        "dense_caption": dense_caption,
+        "ingredients": ingredients,
         "image_vec": image_vec,
         "dense_vec": dense_vec,
+        "sparse_vec": sparse_vec,
         "fused_vec": fused_vec,
     }

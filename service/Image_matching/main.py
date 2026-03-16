@@ -1,6 +1,5 @@
 from fastapi import FastAPI, UploadFile, File
 from pydantic import BaseModel
-import time
 
 from utils import read_image, analyze_food_image, faiss_cosine_similarity
 
@@ -24,7 +23,6 @@ async def compare_food_images(
     image_a: UploadFile = File(...),
     image_b: UploadFile = File(...)
 ):
-    # start_time = time.time()
     bytes_a = await image_a.read()
     bytes_b = await image_b.read()
 
@@ -35,9 +33,6 @@ async def compare_food_images(
     result_b = analyze_food_image(pil_b)
 
     score = faiss_cosine_similarity(result_a["fused_vec"], result_b["fused_vec"])
-
-    # end_time = time.time()
-    # print(f"Processing time: {end_time - start_time:.2f} seconds")
 
     return CompareResponse(
         score=round(float(score), 4),
