@@ -1,0 +1,85 @@
+[
+  {
+    "id": "item_000000",
+    "image_path": "images/Screenshot from 2026-03-14 01-32-43.png",
+    "description": "A bustling commercial kitchen scene shows multiple chefs preparing various ingredients, including one chef actively chopping large green leafy vegetables into a clear bag, while other stations display bowls of shredded yellow vegetables, dark cooked food, and clear bags of prepared items stored in a cooler.",
+    "ingredients": [
+      "green leafy vegetables",
+      "shredded yellow vegetables",
+      "cooked dark food",
+      "prepared food in clear bags"
+    ]
+  },
+  {
+    "id": "item_000001",
+    "image_path": "images/Screenshot from 2026-03-14 00-16-06.png",
+    "description": "A bustling commercial kitchen features a bag of fresh limes on a green cutting board, alongside various containers holding chopped green vegetables, yellow liquid sauces, and a dark cooked dish, with discarded clam shells visible in a blue bin.",
+    "ingredients": [
+      "limes",
+      "chopped green vegetables",
+      "yellow liquid sauce",
+      "cooked dish",
+      "clam shells"
+    ]
+  },
+  {
+    "id": "item_000002",
+    "image_path": "images/Screenshot from 2026-03-14 00-04-24.png",
+    "description": "Green vegetables are being chopped on a red cutting board, with a bowl of shredded yellow ingredients visible nearby, in a bustling commercial kitchen.",
+    "ingredients": [
+      "green vegetables",
+      "shredded yellow ingredients"
+    ]
+  },
+  {
+    "id": "item_000003",
+    "image_path": "images/Screenshot from 2026-03-14 18-34-20.png",
+    "description": "No food is visible in the image.",
+    "ingredients": []
+  },
+  {
+    "id": "item_000004",
+    "image_path": "images/Screenshot from 2026-03-15 21-24-36.png",
+    "description": "",
+    "ingredients": []
+  },
+  {
+    "id": "item_000005",
+    "image_path": "images/Screenshot from 2026-03-15 22-20-51.png",
+    "description": "A kitchen counter displays green limes being chopped on a red cutting board, alongside a metal slicer, containers of shredded yellow vegetables, and a bin containing discarded seafood shells.",
+    "ingredients": [
+      "limes",
+      "shredded yellow vegetables",
+      "seafood shells"
+    ]
+  },
+  {
+    "id": "item_000006",
+    "image_path": "images/Screenshot from 2026-03-15 21-44-29.png",
+    "description": "The image displays a technical diagram with a graph, axes labeled 'Chunk' and 'Time', and various data points and labels related to 'Chunk_len', 'Sub_sampling', 'Right_context', and 'Infer', but no food items are visible.",
+    "ingredients": []
+  },
+  {
+    "id": "item_000007",
+    "image_path": "images/Screenshot from 2026-03-15 22-38-18.png",
+    "description": "Freshly chopped green vegetables are visible on a red cutting board, alongside yellow noodles or shredded vegetables in a metal container, and an assortment of bottled sauces and condiments, all indicating food preparation.",
+    "ingredients": [
+      "green vegetables",
+      "yellow noodles",
+      "shredded vegetables",
+      "bottled sauces",
+      "condiments"
+    ]
+  },
+  {
+    "id": "item_000008",
+    "image_path": "images/Screenshot from 2026-03-14 00-09-39.png",
+    "description": "A commercial kitchen scene featuring a red cutting board with chopped green vegetables, alongside containers holding shredded carrots and green leafy vegetables, with various sauce bottles and a slicer machine visible on the stainless steel counter.",
+    "ingredients": [
+      "chopped green vegetables",
+      "shredded carrots",
+      "green leafy vegetables",
+      "sauces"
+    ]
+  }
+]
