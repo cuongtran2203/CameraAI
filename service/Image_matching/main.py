@@ -1,16 +1,27 @@
+from typing import List
 from fastapi import FastAPI, UploadFile, File
 from pydantic import BaseModel
 
-from utils import read_image, analyze_food_image, faiss_cosine_similarity
+from utils import read_image, analyze_food_image, faiss_cosine_similarity, ingredient_similarity
+from config import W_BASE, W_INGREDIENT
 
 app = FastAPI(title="Food Image Matching API")
 
 
+# =========================
+# Schemas
+# =========================
+class ImageAnalysis(BaseModel):
+    dense_caption: str
+    ingredients: List[str]
+
 class CompareResponse(BaseModel):
     score: float
+    base_score: float
+    ingredient_score: float
     is_match: bool
-    image_a_caption: str
-    image_b_caption: str
+    image_a: ImageAnalysis
+    image_b: ImageAnalysis
 
 
 @app.get("/health")
@@ -32,11 +43,22 @@ async def compare_food_images(
     result_a = analyze_food_image(pil_a)
     result_b = analyze_food_image(pil_b)
 
-    score = faiss_cosine_similarity(result_a["fused_vec"], result_b["fused_vec"])
+    base_score = faiss_cosine_similarity(result_a["fused_vec"], result_b["fused_vec"])
+    ing_score = ingredient_similarity(result_a["ingredients"], result_b["ingredients"])
+
+    final_score = (W_BASE * base_score) + (W_INGREDIENT * ing_score)
 
     return CompareResponse(
-        score=round(float(score), 4),
-        is_match=bool(score >= 0.8),
-        image_a_caption=result_a["dense_caption"],
-        image_b_caption=result_b["dense_caption"],
+        score=round(float(final_score), 4),
+        base_score=round(float(base_score), 4),
+        ingredient_score=round(float(ing_score), 4),
+        is_match=bool(final_score >= 0.75),
+        image_a=ImageAnalysis(
+            dense_caption=result_a["dense_caption"],
+            ingredients=result_a["ingredients"],
+        ),
+        image_b=ImageAnalysis(
+            dense_caption=result_b["dense_caption"],
+            ingredients=result_b["ingredients"],
+        ),
     )
