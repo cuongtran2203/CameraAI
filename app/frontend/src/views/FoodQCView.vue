@@ -146,7 +146,7 @@
                     Live Stream
                   </h3>
                   <span class="rounded bg-red-100 px-2 py-1 text-xs font-bold text-red-600 dark:bg-red-900/30 dark:text-red-400">
-                    LIVE: NODE 04
+                    LIVE: {{ currentResult.camera_id || 'NODE 04' }}
                   </span>
                 </div>
 
@@ -157,14 +157,14 @@
                   />
                   <div class="pointer-events-none absolute inset-0 border-[3px] border-primary/40" />
                   <div class="absolute bottom-3 right-3 rounded bg-primary px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white">
-                    Analyzing...
+                    {{ currentResult.result_status ? 'Analyzing...' : 'Waiting...' }}
                   </div>
                 </div>
 
                 <div class="mt-3 flex items-center justify-between">
-                  <p class="text-sm text-slate-500 dark:text-slate-400">Timestamp: 14:22:05:12</p>
+                  <p class="text-sm text-slate-500 dark:text-slate-400">Timestamp: {{ liveTimestamp }}</p>
                   <div class="flex gap-1">
-                    <div class="size-2 rounded-full bg-primary" />
+                    <div class="size-2 rounded-full" :class="isWsConnected ? 'bg-primary animate-pulse' : 'bg-slate-300'" />
                     <div class="size-2 rounded-full bg-primary/30" />
                     <div class="size-2 rounded-full bg-primary/30" />
                   </div>
@@ -178,30 +178,38 @@
                   Similarity Score
                 </span>
                 <div class="flex items-baseline gap-3">
-                  <h2 class="text-5xl font-black text-slate-900 dark:text-white">98.4%</h2>
-                  <span class="flex items-center gap-1 font-bold text-green-500">
-                    <span class="material-symbols-outlined">trending_up</span>
-                    +0.2%
+                  <h2 class="text-5xl font-black text-slate-900 dark:text-white">
+                    {{ displaySimilarityScore }}%
+                  </h2>
+                  <span class="flex items-center gap-1 font-bold" :class="scoreTrend >= 0 ? 'text-green-500' : 'text-red-500'">
+                    <span class="material-symbols-outlined">{{ scoreTrend >= 0 ? 'trending_up' : 'trending_down' }}</span>
+                    {{ scoreTrend >= 0 ? '+' : '' }}{{ scoreTrend }}%
                   </span>
                 </div>
               </div>
 
               <div class="max-w-md flex-1 px-10">
                 <div class="flex h-4 w-full overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
-                  <div class="h-full bg-primary" style="width: 98.4%" />
+                  <div
+                    class="h-full transition-all duration-500"
+                    :class="scoreStatusColor"
+                    :style="{ width: displaySimilarityScore + '%' }"
+                  />
                 </div>
                 <div class="mt-2 flex justify-between text-[10px] font-bold uppercase text-slate-400">
-                  <span>Critical (85%)</span>
-                  <span>Warning (92%)</span>
-                  <span>Optimal (95%+)</span>
+                  <span>Pass (>= {{ liveData.thresholds.pass || 90 }}%)</span>
+                  <span>Optimal ({{ liveData.thresholds.optimal || 95 }}%+)</span>
                 </div>
               </div>
 
               <div class="flex flex-col items-end">
-                <span class="rounded-full bg-green-100 px-3 py-1 text-sm font-bold text-green-500 dark:bg-green-900/30">
-                  MATCH PASSED
+                <span
+                  class="rounded-full px-3 py-1 text-sm font-bold"
+                  :class="statusBadgeClass"
+                >
+                  {{ statusLabel }}
                 </span>
-                <span class="mt-1 text-xs text-slate-400">Confidence: 0.998</span>
+                <span class="mt-1 text-xs text-slate-400">Confidence: {{ displayConfidence }}</span>
               </div>
             </div>
           </div>
@@ -270,7 +278,7 @@
                               {{ formatTime(item.checked_at) }}
                             </span>
                             <span class="mt-1 text-[10px] text-slate-400">
-                              Batch {{ getBatchId(item.id) }}
+                              {{ item.food_item || 'Batch ' + (item.batch_id || getBatchId(item.id)) }}
                             </span>
                           </div>
                         </td>
@@ -349,7 +357,7 @@
               </div>
               <div>
                 <p class="text-xs font-bold uppercase tracking-wider text-slate-500">Color Match</p>
-                <p class="text-xl font-bold">99.1%</p>
+                <p class="text-xl font-bold">{{ currentResult.color_score || '--' }}%</p>
               </div>
             </div>
           </div>
@@ -361,7 +369,7 @@
               </div>
               <div>
                 <p class="text-xs font-bold uppercase tracking-wider text-slate-500">Texture Diff</p>
-                <p class="text-xl font-bold">1.2%</p>
+                <p class="text-xl font-bold">{{ currentResult.texture_score ? (100 - currentResult.texture_score).toFixed(1) : '--' }}%</p>
               </div>
             </div>
           </div>
@@ -372,8 +380,8 @@
                 <span class="material-symbols-outlined">view_in_ar</span>
               </div>
               <div>
-                <p class="text-xs font-bold uppercase tracking-wider text-slate-500">Volume Est.</p>
-                <p class="text-xl font-bold">482g</p>
+                <p class="text-xs font-bold uppercase tracking-wider text-slate-500">Portion Score</p>
+                <p class="text-xl font-bold">{{ currentResult.portion_score || '--' }}%</p>
               </div>
             </div>
           </div>
@@ -385,7 +393,7 @@
               </div>
               <div>
                 <p class="text-xs font-bold uppercase tracking-wider text-slate-500">Surface Temp</p>
-                <p class="text-xl font-bold">68.4°C</p>
+                <p class="text-xl font-bold">{{ currentResult.environmental?.surface_temp || '--' }}°C</p>
               </div>
             </div>
           </div>
@@ -402,24 +410,47 @@
 </template>
 
 <script setup>
-import { computed, nextTick, onMounted, ref } from 'vue'
+import { computed, nextTick, onMounted, onUnmounted, ref } from 'vue'
 import ApiService from '@/services/ApiService'
+import { useFoodQCWebSocket } from '@/composables/useFoodQCWebSocket'
 
 const apiService = new ApiService()
+const { connect, disconnect, on, off, isConnected, requestHistory } = useFoodQCWebSocket()
 
-const DEFAULT_PAGE_SIZE = 10
+// WebSocket data
+const liveData = ref({
+  currentResult: null,
+  stats: {
+    items_checked_today: 0,
+    passed_today: 0,
+    failed_today: 0,
+    warning_today: 0,
+    pass_rate_today: 0,
+    current_session: {
+      items_checked: 0,
+      passed: 0,
+      failed: 0,
+      pass_rate: 0
+    }
+  },
+  thresholds: {
+    pass: 90,
+    optimal: 95
+  },
+  recentResults: []
+})
+
 const activeFilter = ref('all')
 const isLoading = ref(false)
 const isLoadingMore = ref(false)
 const logContainerRef = ref(null)
+const isWsConnected = ref(false)
 
 const createTabState = () => ({
-  items: [],
-  currentPage: 1,
-  hasMore: true,
+  items: [],         // All items
   showFullLog: false,
-  isLoadedAll: false,
   scrollTop: 0,
+  previewCount: 10   // Number of items to show in preview mode
 })
 
 const tabStates = ref({
@@ -429,26 +460,155 @@ const tabStates = ref({
 })
 
 const currentTabState = computed(() => tabStates.value[activeFilter.value] || createTabState())
-const qcResults = computed(() => currentTabState.value.items || [])
+
+// Computed: return items based on showFullLog mode
+const qcResults = computed(() => {
+  const tab = currentTabState.value
+  if (!tab.items.length) return []
+
+  if (tab.showFullLog) {
+    // Show all items (max 500)
+    return tab.items.slice(0, 500)
+  } else {
+    // Show preview (first 10 items)
+    return tab.items.slice(0, tab.previewCount)
+  }
+})
+
 const showFullLog = computed(() => currentTabState.value.showFullLog || false)
 
-const buildParamsByTab = (tabKey, page = 1, loadAll = false) => {
-  const params = {}
+// ---------------------------------------------
+// Computed Properties for Real-time Display
+// ---------------------------------------------
 
-  if (loadAll) {
-    params.is_all = 1
+const currentResult = computed(() => liveData.value.currentResult || {})
+const stats = computed(() => liveData.value.stats || {})
+
+// Similarity score from current result or session average
+const displaySimilarityScore = computed(() => {
+  if (currentResult.value.similarity_score) {
+    return Math.round(currentResult.value.similarity_score * 100)
+  }
+  const session = stats.value.current_session
+  if (session && session.pass_rate) {
+    return Math.round(session.pass_rate * 100)
+  }
+  return 0
+})
+
+// Score trend (mock for now)
+const scoreTrend = computed(() => {
+  const session = stats.value.current_session
+  if (session && session.pass_rate) {
+    return Math.round((session.pass_rate - 0.95) * 100)
+  }
+  return 0
+})
+
+// Status badge class - >= 90% = pass (green), < 90% = fail (red)
+const statusBadgeClass = computed(() => {
+  const score = displaySimilarityScore.value
+
+  if (score >= 90) {
+    return 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
   } else {
-    params.page = page
-    params.page_size = DEFAULT_PAGE_SIZE
+    return 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
   }
+})
 
-  if (tabKey === 'passed') {
-    params.status_filter = 'passed'
-  } else if (tabKey === 'failed') {
-    params.status_filter = 'failed'
+// Status label - >= 90% = PASSED, < 90% = FAILED
+const statusLabel = computed(() => {
+  const score = displaySimilarityScore.value
+
+  if (score >= 90) {
+    return 'MATCH PASSED'
+  } else {
+    return 'FAILED'
   }
+})
 
-  return params
+// Score bar color - >= 90% = primary, < 90% = red
+const scoreStatusColor = computed(() => {
+  const score = displaySimilarityScore.value
+
+  if (score >= 90) {
+    return 'bg-primary'
+  } else {
+    return 'bg-red-500'
+  }
+})
+
+// Display confidence
+const displayConfidence = computed(() => {
+  if (currentResult.value.confidence) {
+    return currentResult.value.confidence.toFixed(3)
+  }
+  return 'N/A'
+})
+
+// Live timestamp
+const liveTimestamp = computed(() => {
+  if (currentResult.value.timestamp) {
+    return formatTime(currentResult.value.timestamp)
+  }
+  return '--:--:--:--'
+})
+
+// Stats display
+const todayStats = computed(() => stats.value)
+
+// Fetch all data once and split by status
+const fetchTodayQCData = async () => {
+  isLoading.value = true
+
+  try {
+    // Get today's date
+    const today = new Date()
+    const startDate = today.toISOString().split('T')[0] // YYYY-MM-DD
+
+    // Call API with date filter - get only today's data
+    const response = await apiService.get('/v1/food/qc-results', {
+      start_date: startDate,
+      end_date: startDate,
+      page: 1,
+      page_size: 1000 // Get up to 1000 items
+    })
+
+    const allData = Array.isArray(response) ? response : []
+
+    // Map status from backend (pass/fail) to frontend (passed/failed)
+    const mapStatus = (status) => {
+      if (status === 'pass') return 'passed'
+      if (status === 'fail') return 'failed'
+      return status
+    }
+
+    // Split data into tabs
+    const passedItems = []
+    const failedItems = []
+
+    allData.forEach(item => {
+      const mappedStatus = mapStatus(item.result_status)
+      item.result_status = mappedStatus // Update to frontend format
+
+      if (mappedStatus === 'passed') {
+        passedItems.push(item)
+      } else if (mappedStatus === 'failed') {
+        failedItems.push(item)
+      }
+    })
+
+    // Update tab states
+    tabStates.value.all.items = allData
+    tabStates.value.passed.items = passedItems
+    tabStates.value.failed.items = failedItems
+
+    console.log(`Loaded today: ${allData.length} total, ${passedItems.length} passed, ${failedItems.length} failed`)
+  } catch (error) {
+    console.error('Error fetching QC results:', error)
+  } finally {
+    isLoading.value = false
+  }
 }
 
 const waitForPaint = async () => {
@@ -480,69 +640,19 @@ const handleLogScroll = () => {
   tab.scrollTop = logContainerRef.value.scrollTop || 0
 }
 
-const fetchQCResults = async (tabKey = 'all', page = 1, reset = false) => {
-  const tab = tabStates.value[tabKey]
-  if (!tab) return
-
-  isLoading.value = true
-
-  try {
-    const params = buildParamsByTab(tabKey, page, false)
-    const response = await apiService.get('/v1/food/qc-results', params)
-    const data = Array.isArray(response) ? response : []
-
-    if (reset || page === 1) {
-      tab.items = data
-    } else {
-      tab.items = [...tab.items, ...data]
-    }
-
-    tab.currentPage = page
-    tab.hasMore = data.length === DEFAULT_PAGE_SIZE
-  } catch (error) {
-    console.error(`Error fetching QC results for tab "${tabKey}":`, error)
-  } finally {
-    isLoading.value = false
-  }
-}
-
-const fetchAllQCResults = async (tabKey = 'all') => {
-  const tab = tabStates.value[tabKey]
-  if (!tab) return
-
-  isLoading.value = true
-
-  try {
-    const params = buildParamsByTab(tabKey, 1, true)
-    const response = await apiService.get('/v1/food/qc-results', params)
-    const data = Array.isArray(response) ? response : []
-
-    tab.items = data
-    tab.showFullLog = true
-    tab.isLoadedAll = true
-    tab.currentPage = 1
-    tab.hasMore = false
-  } catch (error) {
-    console.error(`Error fetching ALL QC results for tab "${tabKey}":`, error)
-  } finally {
-    isLoading.value = false
-  }
-}
-
 const viewFullLog = async (tabKey = activeFilter.value) => {
   const tab = tabStates.value[tabKey]
   if (!tab) return
 
+  // Save scroll position before switching
   if (tabKey === activeFilter.value) {
     saveScrollPosition(tabKey)
   }
 
-  if (!tab.isLoadedAll) {
-    await fetchAllQCResults(tabKey)
-  } else {
-    tab.showFullLog = true
-  }
+  // Toggle to full log view - no API call needed, data already loaded
+  tab.showFullLog = true
 
+  // Restore scroll position after toggle
   if (tabKey === activeFilter.value) {
     await restoreScrollPosition(tabKey)
   }
@@ -552,49 +662,36 @@ const collapseFullLog = async (tabKey = activeFilter.value) => {
   const tab = tabStates.value[tabKey]
   if (!tab) return
 
+  // Save scroll position before switching
+  if (tabKey === activeFilter.value) {
+    saveScrollPosition(tabKey)
+  }
+
+  // Toggle back to preview - no API call needed
   tab.showFullLog = false
-  tab.isLoadedAll = false
-  tab.currentPage = 1
-  tab.hasMore = true
   tab.scrollTop = 0
 
-  await fetchQCResults(tabKey, 1, true)
-
+  // Restore scroll position after toggle
   if (tabKey === activeFilter.value) {
     await restoreScrollPosition(tabKey)
   }
 }
 
 const handleFilterClick = async (filter) => {
+  // Save scroll position of current tab
   const previousTab = activeFilter.value
   saveScrollPosition(previousTab)
 
+  // Switch to new tab (data already loaded from fetchAllQCData)
   activeFilter.value = filter
 
-  const tab = tabStates.value[filter]
-  if (!tab) return
-
-  if (!tab.items.length) {
-    await fetchQCResults(filter, 1, true)
-  }
-
+  // Restore scroll position of new tab
   await restoreScrollPosition(filter)
 }
 
+// Refresh current tab - reload today's data from API
 const refreshCurrentTab = async () => {
-  const tabKey = activeFilter.value
-  const tab = tabStates.value[tabKey]
-  if (!tab) return
-
-  saveScrollPosition(tabKey)
-
-  if (tab.showFullLog) {
-    await fetchAllQCResults(tabKey)
-  } else {
-    await fetchQCResults(tabKey, 1, true)
-  }
-
-  await restoreScrollPosition(tabKey)
+  await fetchTodayQCData()
 }
 
 const formatTime = (timestamp) => {
@@ -613,8 +710,133 @@ const getBatchId = (id) => {
   return String(id).substring(0, 8).toUpperCase()
 }
 
+// ---------------------------------------------
+// WebSocket Event Handlers
+// ---------------------------------------------
+
+const handleQCResult = (data) => {
+  console.log('QC Result received:', data)
+
+  // Update current result
+  liveData.value.currentResult = data
+
+  // Map status from backend to match the expected format
+  // >= 90% = passed, < 90% = failed
+  const statusMap = {
+    'pass': 'passed',
+    'passed': 'passed',
+    'fail': 'failed',
+    'failed': 'failed'
+  }
+  const mappedStatus = statusMap[data.result_status] || data.result_status
+
+  // Create QC item matching the API response format
+  const qcItem = {
+    id: data.message_id || data.id || Date.now(),
+    checked_at: data.timestamp || new Date().toISOString(),
+    similarity_score: data.similarity_score || 0,
+    result_status: mappedStatus, // Use mapped status
+    food_item: data.food_item,
+    batch_id: data.batch_id
+  }
+
+  // Add to recent results (keep max 50 items)
+  liveData.value.recentResults.unshift(qcItem)
+  if (liveData.value.recentResults.length > 50) {
+    liveData.value.recentResults.pop()
+  }
+
+  // Update ALL tabs based on status
+  // 'all' tab - always add
+  if (tabStates.value.all) {
+    tabStates.value.all.items.unshift(qcItem)
+    if (tabStates.value.all.items.length > 100) {
+      tabStates.value.all.items.pop()
+    }
+  }
+
+  // 'passed' tab - add if passed (>= 90%)
+  if (mappedStatus === 'passed') {
+    if (tabStates.value.passed) {
+      tabStates.value.passed.items.unshift(qcItem)
+      if (tabStates.value.passed.items.length > 100) {
+        tabStates.value.passed.items.pop()
+      }
+    }
+  }
+
+  // 'failed' tab - add if failed (< 90%)
+  if (mappedStatus === 'failed') {
+    if (tabStates.value.failed) {
+      tabStates.value.failed.items.unshift(qcItem)
+      if (tabStates.value.failed.items.length > 100) {
+        tabStates.value.failed.items.pop()
+      }
+    }
+  }
+}
+
+const handleQCStats = (data) => {
+  console.log('QC Stats received:', data)
+
+  if (data.stats) {
+    liveData.value.stats = data.stats
+  }
+
+  if (data.thresholds) {
+    liveData.value.thresholds = data.thresholds
+  }
+}
+
+const handleQCConnected = () => {
+  console.log('WebSocket connected')
+  isWsConnected.value = true
+
+  // Request initial history
+  requestHistory(20)
+}
+
+const handleQCDisconnected = () => {
+  console.log('WebSocket disconnected')
+  isWsConnected.value = false
+}
+
+// ---------------------------------------------
+// Initialize WebSocket
+// ---------------------------------------------
+
+const initWebSocket = () => {
+  // Register event handlers
+  on('food_qc_result', handleQCResult)
+  on('food_qc_stats', handleQCStats)
+  on('connected', handleQCConnected)
+  on('disconnected', handleQCDisconnected)
+
+  // Connect
+  connect()
+}
+
+const cleanupWebSocket = () => {
+  // Unregister event handlers
+  off('food_qc_result', handleQCResult)
+  off('food_qc_stats', handleQCStats)
+  off('connected', handleQCConnected)
+  off('disconnected', handleQCDisconnected)
+
+  // Disconnect
+  disconnect()
+}
+
 onMounted(async () => {
-  await fetchQCResults('all', 1, true)
+  // 1. First: Fetch today's data from API
+  await fetchTodayQCData()
+
+  // 2. Then: Connect WebSocket for real-time updates
+  initWebSocket()
+})
+
+onUnmounted(() => {
+  cleanupWebSocket()
 })
 </script>
 

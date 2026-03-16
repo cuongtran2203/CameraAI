@@ -274,20 +274,65 @@ let isComponentMounted = true  // Flag to track component state
 // Loading state
 const loading = ref(true)
 
+// Mock data for dashboard
+const mockDashboardData = {
+  timestamp: new Date().toISOString(),
+  staff: {
+    total_online: 8,
+    total_scheduled: 10,
+    attendance_rate: 0.8
+  },
+  actions: {
+    productive_count: 45,
+    idle_count: 3,
+    top_actions: [
+      { action: 'cooking', count: 20 },
+      { action: 'serving', count: 15 },
+      { action: 'washing', count: 10 }
+    ]
+  },
+  food_qc: {
+    total_checked: 24,
+    pass_count: 22,
+    fail_count: 1,
+    warning_count: 1,
+    pass_rate: 0.92
+  },
+  customers: {
+    current_in_store: 15,
+    entry_today: 87,
+    avg_dwell_time_minutes: 28,
+    peak_hour: '12:00 - 14:00'
+  }
+}
+
 // Fetch initial data from API
 const fetchInitialData = async () => {
   try {
     loading.value = true
-    const response = await api.get('/dashboard/stats')
+
+    // Get branch_id from user (mock for now - use string ID)
+    const branchId = user.value?.branch_id || 'branch-main-001'
+
+    // Try to fetch from API with authentication
+    const response = await api.get(`/v1/dashboard/stats?branch_id=${branchId}`)
     if (response) {
-      console.log('Initial dashboard data loaded')
+      console.log('Dashboard stats loaded:', response)
+      // Use API data if available
+      dashboardData.value = response
     }
   } catch (error) {
-    console.error('Error fetching initial data:', error)
+    console.error('Error fetching dashboard stats:', error)
+    // Use mock data when API fails or not authenticated
+    console.log('Using mock data for dashboard')
+    dashboardData.value = mockDashboardData
   } finally {
     loading.value = false
   }
 }
+
+// Dashboard data from API or mock
+const dashboardData = ref(null)
 
 // AI Stream Data from WebSocket
 const aiStreamData = ref(null)
@@ -400,21 +445,23 @@ const currentSector = computed(() => {
   return user.value?.branch_name || 'North Logistics Hub'
 })
 
-// Quick stats from AI data
+// Quick stats from AI data or mock data
 const peakTraffic = computed(() => {
-  if (!aiStreamData.value?.customers) return '14:00 - 16:00'
-  if (aiStreamData.value.customers.peak_detection) return 'Now (Peak)'
+  if (dashboardData.value?.customers?.peak_hour) return dashboardData.value.customers.peak_hour
+  if (aiStreamData.value?.customers?.peak_detection) return 'Now (Peak)'
   return '14:00 - 16:00'
 })
 
 const qcPassRate = computed(() => {
-  if (!aiStreamData.value?.food_qc) return '99.2%'
-  return `${aiStreamData.value.food_qc.pass_rate}%`
+  if (dashboardData.value?.food_qc?.pass_rate) return `${Math.round(dashboardData.value.food_qc.pass_rate * 100)}%`
+  if (aiStreamData.value?.food_qc?.pass_rate) return `${aiStreamData.value.food_qc.pass_rate}%`
+  return '99.2%'
 })
 
 const oeiValue = computed(() => {
-  if (!aiStreamData.value?.summary) return 33.1
-  return aiStreamData.value.summary.overall_score
+  if (aiStreamData.value?.summary?.overall_score) return aiStreamData.value.summary.overall_score
+  // Use mock data if no real-time data
+  return 85
 })
 
 const criticalAlerts = computed(() => {

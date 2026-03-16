@@ -26,6 +26,7 @@ from app.services.kafka_service import (
     handle_customer_detection,
     KafkaTopics
 )
+from app.services.food_qc_service import simulate_food_qc_updates
 
 # Configure logging
 logging.basicConfig(
@@ -114,6 +115,9 @@ async def lifespan(app: FastAPI):
 
     # Start AI stream simulation (60 seconds for testing, use 900 for 15 minutes in production)
     asyncio.create_task(simulate_ai_stream_updates(interval_seconds=60))  # 1 minute for testing
+
+    # Start Food QC simulation (3 seconds for real-time updates)
+    asyncio.create_task(simulate_food_qc_updates(interval_seconds=3))
 
     logger.info("Camera Analyst API started successfully!")
 

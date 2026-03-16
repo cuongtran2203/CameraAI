@@ -14,6 +14,11 @@ from sqlalchemy import select
 from app.db.database import get_db
 from app.models.models import Camera, User
 from app.api.auth import get_current_user
+from app.services.food_qc_service import (
+    simulate_food_qc_updates,
+    food_qc_manager,
+    MockFoodQCDataGenerator
+)
 
 logger = logging.getLogger(__name__)
 
@@ -237,6 +242,77 @@ async def websocket_camera(
     except Exception as e:
         logger.error(f"WebSocket error: {e}")
         manager.disconnect(websocket, channel)
+
+
+# =====================================================
+# Food QC WebSocket Endpoint
+# =====================================================
+
+@router.websocket("/ws/food-qc")
+async def websocket_food_qc(websocket: WebSocket):
+    """
+    WebSocket endpoint for Food QC real-time updates
+    Receives live QC results and statistics from AI/Kafka
+    """
+    await websocket.accept()
+    food_qc_manager.add_subscriber(websocket, "food_qc")
+
+    try:
+        # Send welcome message
+        await websocket.send_json({
+            "type": "connected",
+            "channel": "food_qc",
+            "message": "Connected to Food QC real-time updates"
+        })
+
+        # Send initial stats
+        initial_stats = MockFoodQCDataGenerator.generate_live_stats()
+        await websocket.send_json({
+            "type": "food_qc_stats",
+            "data": initial_stats,
+            "timestamp": asyncio.get_event_loop().time()
+        })
+
+        # Keep connection alive and handle incoming messages
+        while True:
+            try:
+                data = await asyncio.wait_for(websocket.receive_json(), timeout=60)
+
+                # Handle ping/pong
+                if data.get("type") == "ping":
+                    await websocket.send_json({"type": "pong"})
+
+                # Handle subscription to specific camera
+                elif data.get("type") == "subscribe_camera":
+                    camera_id = data.get("camera_id")
+                    logger.info(f"Food QC client subscribed to camera: {camera_id}")
+
+                # Handle request for historical data
+                elif data.get("type") == "get_history":
+                    # Generate some historical mock data
+                    history = []
+                    for i in range(10):
+                        result = MockFoodQCDataGenerator.generate_qc_result()
+                        history.append(result)
+                    await websocket.send_json({
+                        "type": "food_qc_history",
+                        "data": history
+                    })
+
+                logger.debug(f"Received from Food QC client: {data}")
+
+            except asyncio.TimeoutError:
+                # Send keep-alive ping
+                await websocket.send_json({"type": "ping"})
+            except json.JSONDecodeError:
+                logger.warning("Invalid JSON received from Food QC client")
+
+    except WebSocketDisconnect:
+        food_qc_manager.remove_subscriber(websocket, "food_qc")
+        logger.info("Food QC WebSocket disconnected")
+    except Exception as e:
+        logger.error(f"Food QC WebSocket error: {e}")
+        food_qc_manager.remove_subscriber(websocket, "food_qc")
 
 
 # =====================================================
