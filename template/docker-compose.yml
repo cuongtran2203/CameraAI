@@ -1,0 +1,23 @@
+version: '3.8'
+
+services:
+  api:
+    build: .
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./src:/app/src
+      - ./models_cache:/app/models_cache
+      - ./data:/app/data
+    environment:
+      - DATABASE_URL=sqlite:///./data/sql_app.db
+      - MODEL_NAME=ViT-B-32
+      - DATASET_NAME=laion2b_s34b_b79k
+
+  # Optional database
+  # db:
+  #   image: postgres:15
+  #   environment:
+  #     - POSTGRES_USER=myuser
+  #     - POSTGRES_PASSWORD=mypassword
+  #     - POSTGRES_DB=mydb
