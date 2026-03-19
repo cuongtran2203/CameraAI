@@ -229,7 +229,7 @@
                   >
                     All
                     <span class="bg-slate-200 dark:bg-slate-700 px-1.5 py-0.5 rounded text-[10px]">
-                      {{ tabStates.all.items.length }}
+                      {{ allCount }}
                     </span>
                   </button>
                   <button
@@ -241,7 +241,7 @@
                   >
                     Passed
                     <span class="bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400 px-1.5 py-0.5 rounded text-[10px]">
-                      {{ tabStates.passed.items.length }}
+                      {{ passedCount }}
                     </span>
                   </button>
                   <button
@@ -253,7 +253,7 @@
                   >
                     Failed
                     <span class="bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 px-1.5 py-0.5 rounded text-[10px]">
-                      {{ tabStates.failed.items.length }}
+                      {{ failedCount }}
                     </span>
                   </button>
                 </div>
@@ -277,9 +277,11 @@
                         v-for="item in qcResults"
                         :key="item.id"
                         class="h-[56px]"
-                        :class="item.result_status === 'failed'
-                          ? 'bg-red-50/30 dark:bg-red-900/10'
-                          : 'transition-colors hover:bg-slate-50 dark:hover:bg-slate-800'"
+                        :class="{
+                          'bg-red-50/30 dark:bg-red-900/10': item.result_status === 'failed',
+                          'bg-yellow-50/30 dark:bg-yellow-900/10': item.result_status === 'warning',
+                          'bg-slate-50 dark:hover:bg-slate-800': item.result_status === 'pending' || item.result_status === 'passed',
+                        }"
                       >
                         <td class="px-4 py-3">
                           <div class="flex flex-col justify-center leading-tight">
@@ -304,10 +306,22 @@
                             PASS
                           </span>
                           <span
-                            v-else
+                            v-else-if="item.result_status === 'failed'"
                             class="inline-flex items-center rounded bg-red-100 px-2 py-0.5 text-xs font-bold text-red-700 dark:bg-red-900/30 dark:text-red-400"
                           >
                             FAIL
+                          </span>
+                          <span
+                            v-else-if="item.result_status === 'warning'"
+                            class="inline-flex items-center rounded bg-yellow-100 px-2 py-0.5 text-xs font-bold text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400"
+                          >
+                            WARN
+                          </span>
+                          <span
+                            v-else
+                            class="inline-flex items-center rounded bg-slate-100 px-2 py-0.5 text-xs font-bold text-slate-500 dark:bg-slate-800 dark:text-slate-400"
+                          >
+                            {{ item.result_status?.toUpperCase() || 'N/A' }}
                           </span>
                         </td>
                       </tr>
@@ -495,7 +509,18 @@ const tabStates = ref({
   all: createTabState(),
   passed: createTabState(),
   failed: createTabState(),
+  warning: createTabState(),
+  pending: createTabState(),
 })
+
+// Computed counts - All = passed + failed + warning + pending
+const allCount = computed(() =>
+  passedCount.value + failedCount.value + warningCount.value + pendingCount.value
+)
+const passedCount = computed(() => tabStates.value.passed.items.length)
+const failedCount = computed(() => tabStates.value.failed.items.length)
+const warningCount = computed(() => tabStates.value.warning.items.length)
+const pendingCount = computed(() => tabStates.value.pending.items.length)
 
 const currentTabState = computed(() => tabStates.value[activeFilter.value] || createTabState())
 
@@ -613,16 +638,18 @@ const fetchTodayQCData = async () => {
 
     const allData = Array.isArray(response) ? response : []
 
-    // Map status from backend (pass/fail) to frontend (passed/failed)
+    // Map status from backend to frontend - preserve warning/pending (do NOT map to passed/failed)
     const mapStatus = (status) => {
       if (status === 'pass') return 'passed'
       if (status === 'fail') return 'failed'
-      return status
+      return status // keep warning, pending, etc. as-is
     }
 
     // Split data into tabs
     const passedItems = []
     const failedItems = []
+    const warningItems = []
+    const pendingItems = []
 
     allData.forEach(item => {
       const mappedStatus = mapStatus(item.result_status)
@@ -632,6 +659,10 @@ const fetchTodayQCData = async () => {
         passedItems.push(item)
       } else if (mappedStatus === 'failed') {
         failedItems.push(item)
+      } else if (mappedStatus === 'warning') {
+        warningItems.push(item)
+      } else if (mappedStatus === 'pending') {
+        pendingItems.push(item)
       }
     })
 
@@ -639,6 +670,8 @@ const fetchTodayQCData = async () => {
     tabStates.value.all.items = allData
     tabStates.value.passed.items = passedItems
     tabStates.value.failed.items = failedItems
+    tabStates.value.warning.items = warningItems
+    tabStates.value.pending.items = pendingItems
 
     console.log(`Loaded today: ${allData.length} total, ${passedItems.length} passed, ${failedItems.length} failed`)
   } catch (error) {
@@ -759,13 +792,13 @@ const handleQCResult = (data) => {
   // Update current result
   liveData.value.currentResult = data
 
-  // Map status from backend to match the expected format
-  // >= 90% = passed, < 90% = failed
+  // Map status from backend to frontend - preserve warning/pending (do NOT map to passed/failed)
   const statusMap = {
     'pass': 'passed',
     'passed': 'passed',
     'fail': 'failed',
     'failed': 'failed'
+    // warning, pending → kept as-is by default
   }
   const mappedStatus = statusMap[data.result_status] || data.result_status
 
@@ -804,12 +837,32 @@ const handleQCResult = (data) => {
     }
   }
 
-  // 'failed' tab - add if failed (< 90%)
+  // 'failed' tab - add if failed
   if (mappedStatus === 'failed') {
     if (tabStates.value.failed) {
       tabStates.value.failed.items.unshift(qcItem)
       if (tabStates.value.failed.items.length > 100) {
         tabStates.value.failed.items.pop()
+      }
+    }
+  }
+
+  // 'warning' tab - add if warning
+  if (mappedStatus === 'warning') {
+    if (tabStates.value.warning) {
+      tabStates.value.warning.items.unshift(qcItem)
+      if (tabStates.value.warning.items.length > 100) {
+        tabStates.value.warning.items.pop()
+      }
+    }
+  }
+
+  // 'pending' tab - add if pending
+  if (mappedStatus === 'pending') {
+    if (tabStates.value.pending) {
+      tabStates.value.pending.items.unshift(qcItem)
+      if (tabStates.value.pending.items.length > 100) {
+        tabStates.value.pending.items.pop()
       }
     }
   }
