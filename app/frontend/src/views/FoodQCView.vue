@@ -259,7 +259,7 @@
                 </div>
               </div>
 
-              <div ref="logContainerRef" class="qc-scroll-area overflow-y-auto" @scroll="handleLogScroll">
+              <div ref="logContainerRef" class="qc-scroll-area overflow-y-auto">
                 <div class="relative min-h-full">
                   <table class="w-full border-collapse text-left">
                     <thead
@@ -466,7 +466,7 @@ import ApiService from '@/services/ApiService'
 import { useFoodQCWebSocket } from '@/composables/useFoodQCWebSocket'
 
 const apiService = new ApiService()
-const { connect, disconnect, on, off, isConnected, requestHistory } = useFoodQCWebSocket()
+const { connect, disconnect, on, off, requestHistory } = useFoodQCWebSocket()
 
 // WebSocket data
 const liveData = ref({
@@ -488,7 +488,6 @@ const liveData = ref({
     pass: 90,
     optimal: 95
   },
-  recentResults: []
 })
 
 const activeFilter = ref('all')
@@ -616,8 +615,6 @@ const liveTimestamp = computed(() => {
   return '--:--:--:--'
 })
 
-// Stats display
-const todayStats = computed(() => stats.value)
 
 // Fetch all data once and split by status
 const fetchTodayQCData = async () => {
@@ -625,18 +622,20 @@ const fetchTodayQCData = async () => {
 
   try {
     // Get today's date
-    const today = new Date()
-    const startDate = today.toISOString().split('T')[0] // YYYY-MM-DD
+    const startDate = new Date().toISOString().split('T')[0] // YYYY-MM-DD
 
     // Call API with date filter - get only today's data
     const response = await apiService.get('/v1/food/qc-results', {
       start_date: startDate,
       end_date: startDate,
       page: 1,
-      page_size: 100 // Get up to 100 items (backend max)
+      page_size: 100
     })
 
-    const allData = Array.isArray(response) ? response : []
+    // Handle both API response formats: [...], { data: [...] }, { results: [...] }
+    const allData = Array.isArray(response)
+      ? response
+      : (response?.data ?? response?.results ?? [])
 
     // Map status from backend to frontend - preserve warning/pending (do NOT map to passed/failed)
     const mapStatus = (status) => {
@@ -703,13 +702,6 @@ const restoreScrollPosition = async (tabKey = activeFilter.value) => {
   logContainerRef.value.scrollTop = tab.scrollTop || 0
 }
 
-const handleLogScroll = () => {
-  const tab = tabStates.value[activeFilter.value]
-  if (!tab || !logContainerRef.value) return
-
-  tab.scrollTop = logContainerRef.value.scrollTop || 0
-}
-
 // Load more items
 const loadMore = () => {
   const tab = currentTabState.value
@@ -761,11 +753,6 @@ const handleFilterClick = async (filter) => {
   await restoreScrollPosition(filter)
 }
 
-// Refresh current tab - reload today's data from API
-const refreshCurrentTab = async () => {
-  await fetchTodayQCData()
-}
-
 const formatTime = (timestamp) => {
   if (!timestamp) return '--:--:--'
 
@@ -787,12 +774,10 @@ const getBatchId = (id) => {
 // ---------------------------------------------
 
 const handleQCResult = (data) => {
-  console.log('QC Result received:', data)
+  if (!data) return  // Guard against null WebSocket messages
 
-  // Update current result
   liveData.value.currentResult = data
 
-  // Map status from backend to frontend - preserve warning/pending (do NOT map to passed/failed)
   const statusMap = {
     'pass': 'passed',
     'passed': 'passed',
@@ -807,15 +792,9 @@ const handleQCResult = (data) => {
     id: data.message_id || data.id || Date.now(),
     checked_at: data.timestamp || new Date().toISOString(),
     similarity_score: data.similarity_score || 0,
-    result_status: mappedStatus, // Use mapped status
+    result_status: mappedStatus,
     food_item: data.food_item,
     batch_id: data.batch_id
-  }
-
-  // Add to recent results (keep max 50 items)
-  liveData.value.recentResults.unshift(qcItem)
-  if (liveData.value.recentResults.length > 50) {
-    liveData.value.recentResults.pop()
   }
 
   // Update ALL tabs based on status
@@ -827,7 +806,7 @@ const handleQCResult = (data) => {
     }
   }
 
-  // 'passed' tab - add if passed (>= 90%)
+  // 'passed' tab - add if passed
   if (mappedStatus === 'passed') {
     if (tabStates.value.passed) {
       tabStates.value.passed.items.unshift(qcItem)
@@ -869,7 +848,7 @@ const handleQCResult = (data) => {
 }
 
 const handleQCStats = (data) => {
-  console.log('QC Stats received:', data)
+  if (!data) return  // Guard against null WebSocket messages
 
   if (data.stats) {
     liveData.value.stats = data.stats

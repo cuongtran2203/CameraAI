@@ -399,7 +399,7 @@ import { MEDIAMTX_URL } from '@/config/api.js'
 
 // --- State ---
 const videoRef = ref(null)
-const rtspUrl = ref('rtsp://admin:password@192.168.1.104:554/stream')
+const rtspUrl = ref('')
 const isLoading = ref(false)
 const isConnected = ref(false)
 const errorMsg = ref('')
@@ -438,6 +438,11 @@ const connectStream = async () => {
     return
   }
 
+  if (!videoRef.value) {
+    errorMsg.value = 'Video player chưa sẵn sàng'
+    return
+  }
+
   stopStream()
   isLoading.value = true
   errorMsg.value = ''
@@ -447,7 +452,7 @@ const connectStream = async () => {
   // Wait for MediaMTX to be ready (it auto-pulls when someone connects via HLS)
   await new Promise(resolve => setTimeout(resolve, 1500))
 
-  // 2. Try native HLS first (Safari)
+  // Try native HLS first (Safari)
   if (videoRef.value.canPlayType('application/vnd.apple.mpegurl')) {
     videoRef.value.src = hlsUrl
     videoRef.value.addEventListener('loadedmetadata', () => {
@@ -506,9 +511,6 @@ const saveCamera = () => {
   localStorage.setItem('rtsp_cameras', JSON.stringify(cameras))
   alert(`Đã lưu camera "${cameraName.value}" thành công!`)
 }
-
-// Auto-connect on mount if URL exists
-connectStream()
 
 // Cleanup on unmount
 onUnmounted(() => {

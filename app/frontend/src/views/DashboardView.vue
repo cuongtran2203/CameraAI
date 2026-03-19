@@ -1,10 +1,7 @@
 <template>
   <AppLayout>
-    <!-- Loading Spinner -->
-    <LoadingSpinner v-if="loading" size="lg" />
-
     <!-- Main Content -->
-    <div v-show="!loading" class="layout-container flex flex-col h-screen">
+    <div class="layout-container flex flex-col h-screen">
       <!-- Main Content Area -->
       <main class="flex flex-1 overflow-hidden gap-6">
         <!-- Middle Content: Stats and Charts -->
@@ -232,11 +229,9 @@
 
 <script setup>
 import AppLayout from '../components/AppLayout.vue'
-import LoadingSpinner from '../components/LoadingSpinner.vue'
 import { ref, computed, shallowRef, onMounted, onUnmounted } from 'vue'
 import { useAuth } from '../composables/useAuth'
 import { Line, Bar } from 'vue-chartjs'
-import { api } from '../services/ApiService'
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -271,72 +266,8 @@ let wsReconnectTimer = null  // Timer for reconnection
 const wsConnected = ref(false)
 let isComponentMounted = true  // Flag to track component state
 
-// Loading state
-const loading = ref(true)
-
-// Mock data for dashboard
-const mockDashboardData = {
-  timestamp: new Date().toISOString(),
-  staff: {
-    total_online: 8,
-    total_scheduled: 10,
-    attendance_rate: 0.8
-  },
-  actions: {
-    productive_count: 45,
-    idle_count: 3,
-    top_actions: [
-      { action: 'cooking', count: 20 },
-      { action: 'serving', count: 15 },
-      { action: 'washing', count: 10 }
-    ]
-  },
-  food_qc: {
-    total_checked: 24,
-    pass_count: 22,
-    fail_count: 1,
-    warning_count: 1,
-    pass_rate: 0.92
-  },
-  customers: {
-    current_in_store: 15,
-    entry_today: 87,
-    avg_dwell_time_minutes: 28,
-    peak_hour: '12:00 - 14:00'
-  }
-}
-
-// Fetch initial data from API
-const fetchInitialData = async () => {
-  try {
-    loading.value = true
-
-    // Get branch_id from user (mock for now - use string ID)
-    const branchId = user.value?.branch_id || 'branch-main-001'
-
-    // Try to fetch from API with authentication
-    const response = await api.get(`/v1/dashboard/stats?branch_id=${branchId}`)
-    if (response) {
-      console.log('Dashboard stats loaded:', response)
-      // Use API data if available
-      dashboardData.value = response
-    }
-  } catch (error) {
-    console.error('Error fetching dashboard stats:', error)
-    // Use mock data when API fails or not authenticated
-    console.log('Using mock data for dashboard')
-    dashboardData.value = mockDashboardData
-  } finally {
-    loading.value = false
-  }
-}
-
-// Dashboard data from API or mock
-const dashboardData = ref(null)
-
 // AI Stream Data from WebSocket
 const aiStreamData = ref(null)
-const aiStreamHistory = ref([])
 
 // Initial static data for charts
 const laborLabels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
@@ -351,8 +282,7 @@ const connectWebSocket = () => {
   // VITE_API_URL = http://localhost:8080/api (backend chạy port 8080)
   // WebSocket endpoint = ws://localhost:8080/ws/dashboard
   const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8080/api'
-  const baseUrl = apiUrl.replace(/\/api$/, '').replace(/^http/, 'ws')
-  const wsUrl = `${baseUrl}/ws/dashboard`
+  const wsUrl = apiUrl.replace(/\/api$/, '').replace(/^http/, 'ws') + '/ws/dashboard'
 
   console.log('WebSocket URL:', wsUrl)
 
@@ -402,41 +332,13 @@ const connectWebSocket = () => {
 
 // Handle AI Stream Data from WebSocket
 const handleAIStreamData = (data) => {
-  console.log('AI Stream Data received:', data)
   aiStreamData.value = data
 
-  // Add to history
-  aiStreamHistory.value.push({
-    timestamp: data.timestamp,
-    ...data
-  })
-
-  // Keep only last 10 records
-  if (aiStreamHistory.value.length > 10) {
-    aiStreamHistory.value.shift()
-  }
-
-  // Update charts with real data - validate before updating
-  // ParseInt to ensure we get clean numbers
-  if (data.summary && data.summary.overall_score) {
-    const rawScore = parseFloat(data.summary.overall_score)
-    if (!isNaN(rawScore) && isFinite(rawScore)) {
-      const newScore = Math.round(Math.min(100, Math.max(0, rawScore)))
-      // Create completely new array with validated numbers
-      const newData = [...oeiData.value.slice(1), newScore].map(v => Number(v) || 0)
-      oeiData.value = newData
-      console.log('OEI updated:', newData)
-    }
-  }
-
-  if (data.food_qc) {
-    // Update QC pass rate display
-    console.log('QC Pass Rate:', data.food_qc.pass_rate)
-  }
-
-  if (data.staff) {
-    // Update staff productivity
-    console.log('Staff Productivity:', data.staff.productivity_score)
+  // Update OEI chart if score is valid
+  if (data.summary?.overall_score != null) {
+    const rawScore = Number(data.summary.overall_score) || 0
+    const newScore = Math.round(Math.min(100, Math.max(0, rawScore)))
+    oeiData.value = [...oeiData.value.slice(1), newScore]
   }
 }
 
@@ -445,15 +347,13 @@ const currentSector = computed(() => {
   return user.value?.branch_name || 'North Logistics Hub'
 })
 
-// Quick stats from AI data or mock data
+// Quick stats from WebSocket data
 const peakTraffic = computed(() => {
-  if (dashboardData.value?.customers?.peak_hour) return dashboardData.value.customers.peak_hour
   if (aiStreamData.value?.customers?.peak_detection) return 'Now (Peak)'
   return '14:00 - 16:00'
 })
 
 const qcPassRate = computed(() => {
-  if (dashboardData.value?.food_qc?.pass_rate) return `${Math.round(dashboardData.value.food_qc.pass_rate * 100)}%`
   if (aiStreamData.value?.food_qc?.pass_rate) return `${aiStreamData.value.food_qc.pass_rate}%`
   return '99.2%'
 })
@@ -474,11 +374,7 @@ const alertCount = computed(() => {
 })
 
 // Cleanup on unmount
-onMounted(async () => {
-  // Step 1: Fetch initial data from API
-  await fetchInitialData()
-
-  // Step 2: Then connect WebSocket for real-time updates
+onMounted(() => {
   connectWebSocket()
 })
 
@@ -578,12 +474,3 @@ const laborChartOptions = {
   }
 }
 </script>
-<!-- 
-<style scoped>
-:deep(.apexcharts-xaxis-label) {
-  transform: translateX(-5px);
-}
-:deep(.apexcharts-xaxis) {
-  padding: 0 5px;
-}
-</style> -->
