@@ -125,7 +125,7 @@
                                 class="flex items-center justify-center rounded-xl h-11 px-6 bg-slate-200 dark:bg-primary/10 text-slate-700 dark:text-slate-300 text-sm font-bold hover:bg-primary/20 transition-all">
                                 Cancel
                             </button>
-                            <button
+                            <button @click="saveCamera"
                                 class="flex items-center justify-center rounded-xl h-11 px-8 bg-primary text-white text-sm font-bold hover:brightness-110 shadow-lg shadow-primary/30 transition-all">
                                 Save Changes
                             </button>
@@ -156,11 +156,44 @@
                             <!-- Left: ROI and Video Preview -->
                             <div class="flex-1 flex flex-col gap-6 overflow-y-auto custom-scrollbar h-full">
                                 <div class="bg-slate-900 dark:bg-black rounded-2xl overflow-hidden relative border border-primary/30 shadow-2xl shrink-0">
-                                    <!-- Video Feed Placeholder -->
-                                    <div class="aspect-video w-full bg-slate-800 flex items-center justify-center relative group">
-                                        <img class="w-full h-full object-cover opacity-80"
-                                            data-alt="Lobby area interior wide shot from security camera perspective"
-                                            src="https://lh3.googleusercontent.com/aida-public/AB6AXuC6_3vpnSg01hp2poCQj1VfaSvBRoB2a4JND_y_IATOJ_PLvQH8-I243LLiXEhv6eu0duhCQRA7fZkq_4Q1gGCcYAnnT-zflO0BL50DzrM18snLR5ynFykD9m3A8x2lI86JJzboCayEYSyk-E-vHzZxpG7MpAC1xX86MrzM1e5vAR9Neb6yna3BwOWBgzYNpiyvjJr57AjH46y4Hga8fHYIi-6vlikChPsfCUZqBszGpFN_reryZQfe4m-EmDdG780FB67XzStnu78" />
+                                    <!-- Video Feed (Real Stream) -->
+                                    <div class="aspect-video w-full bg-slate-900 flex items-center justify-center relative group">
+                                        <!-- Loading overlay -->
+                                        <div v-if="isLoading" class="absolute inset-0 flex items-center justify-center z-10 bg-slate-900/80">
+                                            <div class="flex flex-col items-center gap-3">
+                                                <span class="material-symbols-outlined text-5xl text-primary animate-spin">progress_activity</span>
+                                                <span class="text-white text-sm font-bold">Đang kết nối camera...</span>
+                                            </div>
+                                        </div>
+                                        <!-- Error overlay -->
+                                        <div v-else-if="errorMsg && !isConnected" class="absolute inset-0 flex items-center justify-center z-10 bg-slate-900/80">
+                                            <div class="flex flex-col items-center gap-3 text-center px-8">
+                                                <span class="material-symbols-outlined text-5xl text-red-400">videocam_off</span>
+                                                <span class="text-red-400 text-sm font-bold">{{ errorMsg }}</span>
+                                                <button @click="connectStream"
+                                                    class="px-4 py-2 bg-red-500/20 border border-red-500/40 text-red-400 rounded-lg text-xs font-bold hover:bg-red-500/30 transition-all">
+                                                    Thử lại
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <!-- Video element -->
+                                        <video
+                                            ref="videoRef"
+                                            class="w-full h-full object-cover"
+                                            :class="{ 'opacity-0': !isConnected }"
+                                            autoplay
+                                            muted
+                                            playsinline
+                                            controls></video>
+                                        <!-- Idle state (no stream) -->
+                                        <div v-if="!isConnected && !isLoading && !errorMsg" class="absolute inset-0 flex flex-col items-center justify-center gap-3">
+                                            <span class="material-symbols-outlined text-6xl text-slate-600">videocam_off</span>
+                                            <span class="text-slate-500 text-sm">Chưa kết nối camera</span>
+                                            <button @click="connectStream"
+                                                class="px-4 py-2 bg-primary/20 border border-primary/40 text-primary rounded-lg text-xs font-bold hover:bg-primary/30 transition-all">
+                                                Kết nối
+                                            </button>
+                                        </div>
                                         <!-- Drawing Overlay Mockup -->
                                         <svg class="absolute inset-0 w-full h-full pointer-events-none">
                                             <!-- Existing ROI 1 -->
@@ -225,6 +258,19 @@
                                         </h3>
                                         <div class="flex flex-col gap-4">
                                             <div class="flex flex-col gap-2">
+                                                <label class="text-sm font-semibold text-slate-600 dark:text-slate-400" for="camera-name">
+                                                    Camera Name
+                                                </label>
+                                                <div class="flex w-full items-stretch rounded-xl h-11 bg-slate-200 dark:bg-primary/10 border border-slate-300 dark:border-primary/20">
+                                                    <div class="text-slate-500 dark:text-primary/60 flex items-center justify-center pl-4">
+                                                        <span class="material-symbols-outlined text-xl">videocam</span>
+                                                    </div>
+                                                    <input v-model="cameraName" class="form-input flex w-full min-w-0 flex-1 border-none bg-transparent focus:ring-0 text-slate-900 dark:text-slate-100 placeholder:text-slate-500 dark:placeholder:text-primary/40 px-3 text-sm"
+                                                        id="camera-name"
+                                                        placeholder="My Camera" />
+                                                </div>
+                                            </div>
+                                            <div class="flex flex-col gap-2">
                                                 <label class="text-sm font-semibold text-slate-600 dark:text-slate-400" for="rtsp-url">
                                                     RTSP Stream URL
                                                 </label>
@@ -232,13 +278,32 @@
                                                     <div class="text-slate-500 dark:text-primary/60 flex items-center justify-center pl-4">
                                                         <span class="material-symbols-outlined text-xl">link</span>
                                                     </div>
-                                                    <input class="form-input flex w-full min-w-0 flex-1 border-none bg-transparent focus:ring-0 text-slate-900 dark:text-slate-100 placeholder:text-slate-500 dark:placeholder:text-primary/40 px-3 text-sm"
+                                                    <input v-model="rtspUrl" class="form-input flex w-full min-w-0 flex-1 border-none bg-transparent focus:ring-0 text-slate-900 dark:text-slate-100 placeholder:text-slate-500 dark:placeholder:text-primary/40 px-3 text-sm"
                                                         id="rtsp-url"
-                                                        placeholder="rtsp://admin:password@192.168.1.104:554/stream"
-                                                        value="rtsp://admin:password@192.168.1.104:554/stream" />
+                                                        placeholder="rtsp://admin:password@192.168.1.104:554/stream" />
+                                                    <button @click="connectStream"
+                                                        class="flex items-center justify-center px-4 bg-primary text-white rounded-r-xl hover:brightness-110 transition-all shrink-0">
+                                                        <span class="material-symbols-outlined text-xl">play_arrow</span>
+                                                    </button>
+                                                </div>
+                                                <!-- Status -->
+                                                <div v-if="isConnected" class="flex items-center gap-2 text-green-600 text-xs font-bold">
+                                                    <span class="relative flex h-2 w-2">
+                                                        <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-500 opacity-75"></span>
+                                                        <span class="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+                                                    </span>
+                                                    Kết nối thành công
+                                                </div>
+                                                <div v-else-if="errorMsg" class="flex items-center gap-2 text-red-500 text-xs font-bold">
+                                                    <span class="material-symbols-outlined text-sm">error</span>
+                                                    {{ errorMsg }}
+                                                </div>
+                                                <div v-else-if="isLoading" class="flex items-center gap-2 text-primary text-xs font-bold">
+                                                    <span class="material-symbols-outlined text-sm animate-spin">progress_activity</span>
+                                                    Đang kết nối...
                                                 </div>
                                                 <p class="text-[10px] text-slate-500 italic">
-                                                    Enter the full RTSP path including credentials and port to manually connect the camera stream.
+                                                    Nhập link RTSP đầy đủ (protocol://user:pass@ip:port/path), ví dụ: rtsp://admin:password@192.168.1.104:554/stream
                                                 </p>
                                             </div>
                                         </div>
@@ -328,7 +393,127 @@
 </template>
 
 <script setup>
-defineExpose({})
+import { ref, onUnmounted } from 'vue'
+import Hls from 'hls.js'
+import { MEDIAMTX_URL } from '@/config/api.js'
+
+// --- State ---
+const videoRef = ref(null)
+const rtspUrl = ref('rtsp://admin:password@192.168.1.104:554/stream')
+const isLoading = ref(false)
+const isConnected = ref(false)
+const errorMsg = ref('')
+const cameraName = ref('Camera 1')
+let hlsInstance = null
+
+// --- Convert RTSP URL → HLS stream name ---
+const getStreamName = (url) => {
+  // Encode RTSP URL to safe stream name (base64, no special chars)
+  return btoa(url).replace(/[/+=]/g, '_')
+}
+
+const getHlsUrl = (url) => {
+  const streamName = getStreamName(url)
+  return `${MEDIAMTX_URL}/${streamName}/hls.m3u8`
+}
+
+// --- Stop current stream ---
+const stopStream = () => {
+  if (hlsInstance) {
+    hlsInstance.destroy()
+    hlsInstance = null
+  }
+  if (videoRef.value) {
+    videoRef.value.src = ''
+  }
+  isConnected.value = false
+  isLoading.value = false
+  errorMsg.value = ''
+}
+
+// --- Connect to RTSP stream via MediaMTX ---
+const connectStream = async () => {
+  if (!rtspUrl.value.trim()) {
+    errorMsg.value = 'Vui lòng nhập RTSP URL'
+    return
+  }
+
+  stopStream()
+  isLoading.value = true
+  errorMsg.value = ''
+
+  const hlsUrl = getHlsUrl(rtspUrl.value)
+
+  // Wait for MediaMTX to be ready (it auto-pulls when someone connects via HLS)
+  await new Promise(resolve => setTimeout(resolve, 1500))
+
+  // 2. Try native HLS first (Safari)
+  if (videoRef.value.canPlayType('application/vnd.apple.mpegurl')) {
+    videoRef.value.src = hlsUrl
+    videoRef.value.addEventListener('loadedmetadata', () => {
+      isLoading.value = false
+      isConnected.value = true
+      videoRef.value.play().catch(() => {})
+    }, { once: true })
+    videoRef.value.addEventListener('error', tryHlsJs, { once: true })
+    return
+  }
+
+  tryHlsJs()
+}
+
+const tryHlsJs = () => {
+  if (!Hls.isSupported()) {
+    errorMsg.value = 'Trình duyệt không hỗ trợ HLS. Vui lòng dùng Safari hoặc Chrome.'
+    isLoading.value = false
+    return
+  }
+
+  const hlsUrl = getHlsUrl(rtspUrl.value)
+  hlsInstance = new Hls({
+    enableWorker: true,
+    lowLatencyMode: true,
+    backBufferLength: 30,
+  })
+
+  hlsInstance.loadSource(hlsUrl)
+  hlsInstance.attachMedia(videoRef.value)
+
+  hlsInstance.on(Hls.Events.MANIFEST_PARSED, () => {
+    isLoading.value = false
+    isConnected.value = true
+    videoRef.value.play().catch(() => {})
+  })
+
+  hlsInstance.on(Hls.Events.ERROR, (_, data) => {
+    if (data.fatal) {
+      errorMsg.value = `Lỗi stream: ${data.details || 'Không thể kết nối camera'}`
+      isLoading.value = false
+      isConnected.value = false
+    }
+  })
+}
+
+// --- Save camera to localStorage ---
+const saveCamera = () => {
+  if (!rtspUrl.value.trim() || !cameraName.value.trim()) {
+    errorMsg.value = 'Vui lòng nhập đầy đủ thông tin'
+    return
+  }
+  const cameras = JSON.parse(localStorage.getItem('rtsp_cameras') || '[]')
+  const id = Date.now()
+  cameras.push({ id, name: cameraName.value, rtspUrl: rtspUrl.value })
+  localStorage.setItem('rtsp_cameras', JSON.stringify(cameras))
+  alert(`Đã lưu camera "${cameraName.value}" thành công!`)
+}
+
+// Auto-connect on mount if URL exists
+connectStream()
+
+// Cleanup on unmount
+onUnmounted(() => {
+  stopStream()
+})
 </script>
 
 <style scoped>

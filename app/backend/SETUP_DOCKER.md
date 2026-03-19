@@ -5,22 +5,31 @@
 # Services included:
 # - Zookeeper (required for Kafka)
 # - Kafka (message broker)
-# - Kafka UI (manage Kafka topics)
+# - Kafka UI (manage Kafka topics) - http://localhost:8082
 # - PostgreSQL (database)
 # - Redis (caching)
 #
 # =====================================================
 
-# 1. Start all services
+# 1. Prerequisites
+# ---------------
+# - Install Docker Desktop: https://www.docker.com/products/docker-desktop/
+# - Make sure Docker Desktop is running (check icon in menu bar)
+# - If `docker` command not found, add to PATH:
+#   echo 'export PATH="/Applications/Docker.app/Contents/Resources/bin:$PATH"' >> ~/.zshrc
+#   source ~/.zshrc
+
+# 2. Start all services
+# ---------------------
 docker compose up -d
 
-# 2. Check services status
+# 3. Check services status
 docker compose ps
 
-# 3. View logs
+# 4. View logs
 docker compose logs -f
 
-# 4. Stop all services
+# 5. Stop all services
 docker compose down
 
 # =====================================================
@@ -48,3 +57,27 @@ docker exec -it kafka kafka-topics \
 # DATABASE_URL=postgresql+asyncpg://ngohongnguyen:postgres@postgres:5432/camera_analyst
 # KAFKA_BOOTSTRAP_SERVERS=localhost:29092
 # REDIS_URL=redis://redis:6379
+
+# =====================================================
+# Service URLs
+# =====================================================
+# Kafka UI:     http://localhost:8082
+# PostgreSQL:   localhost:5432
+# Redis:        localhost:6379
+# Kafka:        localhost:29092
+
+# =====================================================
+# Troubleshooting
+# =====================================================
+#
+# If docker command not found:
+#   - Ensure Docker Desktop is running
+#   - Add to PATH: export PATH="/Applications/Docker.app/Contents/Resources/bin:$PATH"
+#
+# If containers fail to start:
+#   - Check Docker Desktop logs: docker compose logs [service-name]
+#   - Restart Docker Desktop
+#
+# If port already in use:
+#   - Stop other services using the same port
+#   - Or update port mappings in docker-compose.yml

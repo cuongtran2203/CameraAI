@@ -1,429 +1,451 @@
-# Camera AI Backend - Hướng Dẫn Cài Đặt
+# Camera AI - Hướng Dẫn Cài Đặt Toàn Diện
 
-> ⚠️ **Lưu ý quan trọng:** Docker command trên macOS cần sử dụng đường dẫn đầy đủ:
-> ```bash
-> /Applications/Docker.app/Contents/Resources/bin/docker
-> ```
-> Hoặc thêm alias vào `~/.zshrc`:
-> ```bash
-> echo 'alias docker="/Applications/Docker.app/Contents/Resources/bin/docker"' >> ~/.zshrc
-> source ~/.zshrc
-> ```
+> **Mục tiêu:** Hướng dẫn đầy đủ để developer mới có thể setup và chạy toàn bộ hệ thống (BE + FE) trong 10 phút.
 
 ---
 
-## 🚀 Các Bước Chạy Nhanh
+## 📋 Mục Lục
 
-### Terminal 1: Chạy Docker Services
-
-```bash
-# Bước 1: Di chuyển vào thư mục backend
-cd /Users/ngohongnguyen/Documents/works/CameraAI/app/backend
-
-# Bước 2: Khởi động Docker services (PostgreSQL, Redis, Kafka)
-/Applications/Docker.app/Contents/Resources/bin/docker compose up -d
-
-# Bước 3: Kiểm tra các container đang chạy
-/Applications/Docker.app/Contents/Resources/bin/docker compose ps
-```
-
-### Terminal 2: Chạy Backend
-
-```bash
-# Di chuyển vào thư mục backend
-cd /Users/ngohongnguyen/Documents/works/CameraAI/app/backend
-
-# Chạy Backend
-python3 -m uvicorn app.main:app --host 0.0.0.0 --port 8080 --reload
-```
-
-### Terminal 3: Chạy Frontend (nếu cần)
-
-```bash
-cd /Users/ngohongnguyen/Documents/works/CameraAI/app/frontend
-npm run dev
-```
+1. [Yêu Cầu Hệ Thống](#-yêu-cầu-hệ-thống)
+2. [Cài Đặt Nhanh](#-cài-đặt-nhanh)
+3. [Chạy Backend](#-chạy-backend)
+4. [Chạy Frontend](#-chạy-frontend)
+5. [Seed Data (Mock Data)](#-seed-data-mock-data)
+6. [API Endpoints](#-api-endpoints)
+7. [WebSocket](#-websocket)
+8. [Mock Data cho AI](#-mock-data-cho-ai)
+9. [Xử Lý Sự Cố](#-xử-lý-sự-cố)
 
 ---
 
-## 📋 Tổng Hợp Lệnh
+## 🖥️ Yêu Cầu Hệ Thống
 
-| # | Mô tả | Lệnh |
-|---|-------|------|
-| 1 | Di chuyển vào backend | `cd /Users/ngohongnguyen/Documents/works/CameraAI/app/backend` |
-| 2 | Chạy Docker | `/Applications/Docker.app/Contents/Resources/bin/docker compose up -d` |
-| 3 | Xem logs Docker | `/Applications/Docker.app/Contents/Resources/bin/docker compose logs -f` |
-| 4 | Kiểm tra Docker | `/Applications/Docker.app/Contents/Resources/bin/docker compose ps` |
-| 5 | Dừng Docker | `/Applications/Docker.app/Contents/Resources/bin/docker compose down` |
-| 6 | Chạy Backend | `python3 -m uvicorn app.main:app --host 0.0.0.0 --port 8080 --reload` |
-| 7 | Chạy Frontend | `cd /Users/ngohongnguyen/Documents/works/CameraAI/app/frontend && npm run dev` |
+| Phần mềm | Phiên bản | Ghi chú |
+|----------|-----------|---------|
+| macOS / Linux | - | Windows cần điều chỉnh đường dẫn |
+| Python | 3.9+ | Khuyến nghị Python 3.11 |
+| Node.js | 18+ | Cho Frontend |
+| Docker Desktop | 4.0+ | Cho PostgreSQL, Redis, Kafka |
 
----
+### Kiểm tra cài đặt:
 
-## Yêu Cầu Môi Trường
-
-### 1. Python
-- **Python 3.9+** (khuyến nghị: Python 3.11)
-
-Kiểm tra phiên bản Python:
 ```bash
+# Python
 python3 --version
+
+# Node.js
+node --version
+
+# Docker (trên macOS cần đường dẫn đầy đủ)
+/Applications/Docker.app/Contents/Resources/bin/docker --version
 ```
 
-### 2. Docker Desktop
-- **Docker Desktop** cho macOS/Windows
-- Kiểm tra: `docker --version`
+---
 
-### 3. Cài Đặt Dependencies
+## 🚀 Cài Đặt Nhanh
+
+### 1. Clone code và di chuyển vào thư mục
 
 ```bash
-cd /Users/ngohongnguyen/Documents/works/CameraAI/app/backend
+cd /Users/ngohongnguyen/Documents/works/CameraAI/app
+```
+
+### 2. Cài đặt Backend dependencies
+
+```bash
+cd backend
 pip install -r requirements.txt
 ```
 
----
-
-## Cài Đặt Infrastructure với Docker
-
-### 1. Khởi động Docker Desktop
-- Mở **Docker Desktop** trên máy
-- Đợi Docker khởi động hoàn tất
-
-### 2. Chạy Docker Compose
+### 3. Cài đặt Frontend dependencies
 
 ```bash
-cd /Users/ngohongnguyen/Documents/works/CameraAI/app/backend
-docker compose up -d
-```
-
-### 3. Kiểm tra các services đang chạy
-
-```bash
-docker compose ps
-```
-
-**Kết quả:**
-
-| Service | Port | Mô tả |
-|---------|------|--------|
-| zookeeper | 2181 | Zookeeper cho Kafka |
-| kafka | 9092, 29092 | Kafka Broker |
-| kafka-ui | 8082 | Kafka Web UI |
-| postgres | 5432 | PostgreSQL Database |
-| redis | 6379 | Redis Cache |
-
-### 4. Truy cập Kafka UI
-Mở trình duyệt: **http://localhost:8082**
-
-### 5. Tạo Kafka Topics
-
-```bash
-# Tạo topic cho tracking
-docker exec kafka kafka-topics --create \
-  --topic ai.tracking \
-  --bootstrap-server localhost:29092 \
-  --partitions 1 --replication-factor 1
-
-# Kiểm tra topics đã tạo
-docker exec kafka kafka-topics --list \
-  --bootstrap-server localhost:29092
-```
-
-### 6. Dừng Docker Compose
-
-```bash
-docker compose down
+cd ../frontend
+npm install
 ```
 
 ---
 
-## Cấu Hình Môi Trường (.env)
+## 🔧 Chạy Backend
 
-Tạo file `.env` trong thư mục `app/backend/`:
-
-```env
-# =====================================================
-# Docker Development (Backend chạy trên host, connect vào Docker services)
-# =====================================================
-DATABASE_URL=postgresql+asyncpg://ngohongnguyen:postgres@localhost:5432/camera_analyst
-DATABASE_URL_SYNC=postgresql+psycopg2://ngohongnguyen:postgres@localhost:5432/camera_analyst
-KAFKA_BOOTSTRAP_SERVERS=localhost:29092
-REDIS_URL=redis://localhost:6379
-
-# =====================================================
-# JWT Authentication
-# =====================================================
-SECRET_KEY=your-secret-key-change-in-production-use-something-very-secure
-ALGORITHM=HS256
-ACCESS_TOKEN_EXPIRE_MINUTES=1440
-```
-
----
-
-## Chạy Ứng Dụng Backend
+### Bước 1: Khởi động Docker Services
 
 ```bash
 cd /Users/ngohongnguyen/Documents/works/CameraAI/app/backend
 
-# Chạy với hot reload (khuyến nghị)
+# Trên macOS, sử dụng:
+/Applications/Docker.app/Contents/Resources/bin/docker compose up -d
+
+# Kiểm tra containers đang chạy:
+/Applications/Docker.app/Contents/Resources/bin/docker compose ps
+```
+
+**Kết quả mong đợi:**
+
+| Service | Status | Port |
+|---------|--------|------|
+| postgres | healthy | 5432 |
+| redis | healthy | 6379 |
+| zookeeper | healthy | 2181 |
+| kafka | running | 9092, 29092 |
+| kafka-ui | running | 8082 |
+
+### Bước 2: Chạy Backend
+
+```bash
+cd /Users/ngohongnguyen/Documents/works/CameraAI/app/backend
+
+# Chạy với hot reload
 python3 -m uvicorn app.main:app --host 0.0.0.0 --port 8080 --reload
-
-# Hoặc chạy bình thường
-python3 -m uvicorn app.main:app --host 0.0.0.0 --port 8080
 ```
+
+**Backend chạy tại:** http://localhost:8080
 
 ---
 
-## Luồng Hoạt Động AI ↔ Backend
+## 🎨 Chạy Frontend
 
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                                    AI System                                │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐  │
-│  │ Face         │  │ HAR          │  │ Food QC      │  │ Tracking     │  │
-│  │ Detection    │  │ Actions      │  │ Detection    │  │ Human Count  │  │
-│  └──────┬───────┘  └──────┬───────┘  └──────┬───────┘  └──────┬───────┘  │
-│         │                  │                  │                  │          │
-│         └──────────────────┴──────────────────┴──────────────────┘          │
-│                                      │                                       │
-│                                      ▼                                       │
-│                           ┌─────────────────────┐                            │
-│                           │   Kafka Topics     │                            │
-│                           │  ai.face.*         │                            │
-│                           │  ai.action.*       │                            │
-│                           │  ai.food.*         │                            │
-│                           │  ai.tracking       │                            │
-│                           └─────────┬──────────┘                            │
-└──────────────────────────────────────┼──────────────────────────────────────┘
-                                       │ (AI gửi về)
-                                       ▼
-┌──────────────────────────────────────────────────────────────────────────────┐
-│                              BACKEND (FastAPI)                               │
-│                                                                              │
-│  ┌──────────────────────────────────────────────────────────────────────┐   │
-│  │                    Kafka Consumer Service                               │   │
-│  │  - Lắng nghe Kafka topics                                            │   │
-│  │  - Gọi handler tương ứng khi có message                              │   │
-│  │  - Xử lý và lưu vào Database                                         │   │
-│  │  - Broadcast qua WebSocket                                           │   │
-│  └──────────────────────────────────────────────────────────────────────┘   │
-│                                                                              │
-│  ┌──────────────────────────────────────────────────────────────────────┐   │
-│  │                    Database (PostgreSQL)                               │   │
-│  │  - AttendanceRecords, StaffActions, FoodQCResults, CustomerEvents    │   │
-│  └──────────────────────────────────────────────────────────────────────┘   │
-└──────────────────────────────────────────────────────────────────────────────┘
+```bash
+cd /Users/ngohongnguyen/Documents/works/CameraAI/app/frontend
+
+# Chạy development server
+npm run dev
 ```
 
-### JSON Format từ AI gửi qua Kafka
-
-#### 1. Tracking (Human Counting) - `ai.tracking`
-```json
-{
-  "timestamp": "2026-03-14T10:30:00Z",
-  "number_of_human": 5,
-  "type": "tracking",
-  "camera_id": "cam-001"
-}
-```
-
-#### 2. Face Detection - `ai.face.detections`
-```json
-{
-  "timestamp": "2026-03-14T10:30:00Z",
-  "camera_id": "cam-001",
-  "detections": [
-    {
-      "track_id": "person-123",
-      "staff_id": "staff-uuid",
-      "event_type": "check_in",
-      "confidence": 0.95,
-      "face_embedding": [0.123, -0.456, ...],
-      "image_url": "https://..."
-    }
-  ]
-}
-```
-
-#### 3. Action Detection (HAR) - `ai.action.detections`
-```json
-{
-  "timestamp": "2026-03-14T10:30:00Z",
-  "camera_id": "cam-001",
-  "actions": [
-    {
-      "track_id": "person-123",
-      "staff_id": "staff-uuid",
-      "action_type": "cooking",
-      "action_label": "dang nau",
-      "confidence": 0.92,
-      "duration_seconds": 300,
-      "is_productive": true
-    }
-  ]
-}
-```
-
-#### 4. Food QC Detection - `ai.food.detections`
-```json
-{
-  "timestamp": "2026-03-14T10:30:00Z",
-  "camera_id": "cam-kitchen-001",
-  "detections": [
-    {
-      "food_item_id": "food-001",
-      "result_status": "pass",
-      "similarity_score": 0.88,
-      "color_match": true,
-      "portion_match": true,
-      "topping_present": true,
-      "proof_image_url": "https://...",
-      "staff_id": "staff-uuid"
-    }
-  ]
-}
-```
-
-#### 5. Customer Detection - `ai.customer.detections`
-```json
-{
-  "timestamp": "2026-03-14T10:30:00Z",
-  "camera_id": "cam-entrance-001",
-  "events": [
-    {
-      "session_id": "session-abc123",
-      "event_type": "entry",
-      "zone": "entrance",
-      "dwell_time_seconds": null,
-      "clothing_color": "blue",
-      "is_staff": false
-    }
-  ]
-}
-```
+**Frontend chạy tại:** http://localhost:5173
 
 ---
 
-## Database Migration
+## 📊 Seed Data (Mock Data)
 
-### 1. Cài đặt Alembic
-
-```bash
-pip install alembic
-```
-
-### 2. Khởi tạo Alembic
-
-```bash
-cd /Users/ngohongnguyen/Documents/works/CameraAI/app/backend
-alembic init alembic
-```
-
-### 3. Cấu hình Alembic
-
-Sửa file `alembic.ini`:
-```ini
-sqlalchemy.url = postgresql+asyncpg://ngohongnguyen@localhost:5432/camera_analyst
-```
-
-Sửa file `alembic/env.py` thêm:
-```python
-from app.models import Base
-target_metadata = Base.metadata
-```
-
-### 4. Các lệnh Migration
-
-```bash
-# Tạo migration mới
-alembic revision --autogenerate -m "create users table"
-
-# Chạy migration
-alembic upgrade head
-
-# Rollback migration
-alembic downgrade -1
-
-# Xem lịch sử migration
-alembic history
-```
-
----
-
-## Seed Data
-
-### Chạy Seed Users
+### Seed Users & Initial Data
 
 ```bash
 cd /Users/ngohongnguyen/Documents/works/CameraAI/app/backend
 
-# Seed users (tạo tài khoản mặc định)
+# Chạy seed script để tạo:
+# - Tài khoản mặc định
+# - Company & Branch
+# - Food Items mẫu
+# - Cameras
 python3 seed_users.py
 ```
 
-### Tài khoản mặc định sau seed
+### Tài khoản mặc định
 
 | Email | Password | Role |
 |-------|----------|------|
-| admin@test.com | admin123 | admin |
-| staff@test.com | staff123 | staff |
-| manager@test.com | manager123 | manager |
+| admin@cameraai.com | admin123 | admin |
+| manager@cameraai.com | manager123 | manager |
+| staff@cameraai.com | staff123 | staff |
+
+### Tạo Camera thủ công (nếu cần)
+
+```bash
+# Kết nối PostgreSQL
+psql -h localhost -p 5432 -U ngohongnguyen -d camera_analyst
+
+# Insert camera
+INSERT INTO cameras (id, branch_id, name, code, rtsp_url, location, ai_enabled, is_active)
+VALUES (
+  'cam-001',
+  'branch-main-001',
+  'Kitchen Camera',
+  'CAM001',
+  'rtsp://example.com',
+  'Kitchen',
+  '{"face": true, "action": true, "food": true}'::json,
+  true
+);
+```
 
 ---
 
-## Kiểm Tra
+## 📡 API Endpoints
+
+### Base URL
+```
+http://localhost:8080/api/v1
+```
+
+### Authentication
+
+#### Login
+```bash
+# Request
+POST /auth/login
+Content-Type: application/x-www-form-urlencoded
+
+username=admin@cameraai.com&password=admin123
+
+# Response
+{
+  "access_token": "eyJhbGci...",
+  "token_type": "bearer",
+  "expires_in": 86400,
+  "user": {
+    "id": "usr-admin-admin",
+    "email": "admin@cameraai.com",
+    "full_name": "Admin User",
+    "role": "admin"
+  }
+}
+```
+
+### Dashboard
+
+#### Get Stats
+```bash
+GET /dashboard/stats?branch_id=branch-main-001
+Authorization: Bearer <token>
+
+# Response
+{
+  "timestamp": "2026-03-19T10:30:00Z",
+  "staff": {
+    "total_online": 0,
+    "total_scheduled": 5,
+    "attendance_rate": 0.0
+  },
+  "actions": {
+    "productive_count": 0,
+    "idle_count": 0,
+    "top_actions": []
+  },
+  "food_qc": {
+    "total_checked": 0,
+    "pass_count": 0,
+    "fail_count": 0,
+    "warning_count": 0,
+    "pass_rate": 0
+  },
+  "customers": {
+    "current_in_store": 0,
+    "entry_today": 0,
+    "avg_dwell_time_minutes": 0,
+    "peak_hour": null
+  }
+}
+```
+
+### Food QC
+
+#### Get QC Results
+```bash
+GET /food/qc-results?page=1&page_size=10
+Authorization: Bearer <token>
+
+# Response
+[
+  {
+    "id": "qc-result-001",
+    "camera_id": "cam-001",
+    "food_item_id": "food-001",
+    "result_status": "passed",
+    "similarity_score": 0.942,
+    "color_match": true,
+    "portion_match": true,
+    "topping_present": true,
+    "proof_image_url": null,
+    "checked_by": "ai",
+    "checked_at": "2026-03-19T10:30:00Z"
+  }
+]
+```
+
+#### Get Food Items
+```bash
+GET /food/items?branch_id=branch-main-001
+Authorization: Bearer <token>
+```
+
+---
+
+## 🔌 WebSocket
+
+### Kết nối
+
+```javascript
+// Frontend
+const ws = new WebSocket('ws://localhost:8080/ws/dashboard');
+
+// Listen for messages
+ws.onmessage = (event) => {
+  const data = JSON.parse(event.data);
+  console.log('Received:', data);
+};
+```
+
+### Message Types
+
+| Type | Mô tả |
+|------|--------|
+| `food_qc_result` | Kết quả QC món ăn mới |
+| `food_qc_stats` | Thống kê QC |
+| `ai_stream_data` | Dữ liệu AI stream |
+
+### Ví dụ Message
+
+```json
+{
+  "type": "food_qc_result",
+  "data": {
+    "food_item": "Phở Bò",
+    "result_status": "pass",
+    "similarity_score": 0.92,
+    "color_score": 95.2,
+    "portion_score": 90.0
+  },
+  "timestamp": "2026-03-19T10:30:00Z"
+}
+```
+
+---
+
+## 🤖 Mock Data cho AI
+
+### Simulation đang chạy
+
+Backend tự động chạy **Food QC Simulation** mỗi 3 giây:
+- Sinh data mock giống như AI thật
+- Lưu vào database
+- Broadcast qua WebSocket
+
+### Mock Data Format
+
+#### Food QC Result (từ AI simulation)
+
+```json
+{
+  "message_id": "uuid-here",
+  "timestamp": "2026-03-19T10:30:00Z",
+  "camera_id": "NODE-02",
+  "food_item": "Phở Bò",
+  "food_category": "main",
+  "result_status": "pass",
+  "similarity_score": 0.95,
+  "color_score": 95.2,
+  "portion_score": 92.0,
+  "topping_score": 90.5,
+  "proof_image_url": "/api/v1/images/proof/abc123.jpg"
+}
+```
+
+### Tắt/Mở Simulation
+
+Để tắt simulation, sửa `app/main.py`:
+
+```python
+# Tắt simulation
+async_task = asyncio.create_task(simulate_food_qc_updates(interval_seconds=0))  # 0 = disabled
+
+# Hoặc bật lại
+async_task = asyncio.create_task(simulate_food_qc_updates(interval_seconds=3))
+```
+
+---
+
+## 📁 Cấu Trúc Project
+
+```
+CameraAI/
+├── app/
+│   ├── backend/
+│   │   ├── app/
+│   │   │   ├── api/           # API routes
+│   │   │   │   ├── auth.py
+│   │   │   │   ├── cameras.py
+│   │   │   │   ├── dashboard.py
+│   │   │   │   ├── food.py
+│   │   │   │   ├── staff.py
+│   │   │   │   └── websocket.py
+│   │   │   ├── db/
+│   │   │   ├── models/
+│   │   │   ├── schemas/
+│   │   │   ├── services/
+│   │   │   │   ├── food_qc_service.py  # Food QC simulation
+│   │   │   │   └── kafka_service.py    # Kafka handlers
+│   │   │   └── main.py
+│   │   ├── docker-compose.yml
+│   │   ├── seed_users.py
+│   │   └── requirements.txt
+│   │
+│   └── frontend/
+│       ├── src/
+│       │   ├── views/
+│       │   │   ├── DashboardView.vue
+│       │   │   ├── FoodQCView.vue
+│       │   │   └── RTSPSetupView.vue
+│       │   └── services/
+│       └── package.json
+```
+
+---
+
+## 🔗 Các URLs quan trọng
 
 | Service | URL |
 |---------|-----|
+| **Frontend** | http://localhost:5173 |
+| **Backend API** | http://localhost:8080 |
 | **API Docs** | http://localhost:8080/docs |
 | **Health Check** | http://localhost:8080/health |
 | **Kafka UI** | http://localhost:8082 |
 
 ---
 
-## Tài Khoản Mặc Định
+## 🔧 Xử Lý Sự Cố
 
-| Field | Value |
-|-------|-------|
-| Email | admin@test.com |
-| Password | admin123 |
+### Lỗi "Connection refused" PostgreSQL
+
+```bash
+# Kiểm tra PostgreSQL container
+/Applications/Docker.app/Contents/Resources/bin/docker compose ps postgres
+
+# Restart PostgreSQL
+/Applications/Docker.app/Contents/Resources/bin/docker compose restart postgres
+```
+
+### Lỗi "password authentication failed"
+
+Kiểm tra file `.env`:
+
+```env
+DATABASE_URL=postgresql+asyncpg://ngohongnguyen:postgres@localhost:5432/camera_analyst
+```
+
+### Lỗi CORS
+
+Backend đã cấu hình `allow_origins=["*"]`. Kiểm tra Frontend gọi đúng URL:
+
+```env
+# frontend/.env
+VITE_API_URL=http://localhost:8080/api
+```
+
+### Docker command not found (macOS)
+
+```bash
+# Thêm alias vào ~/.zshrc
+echo 'alias docker="/Applications/Docker.app/Contents/Resources/bin/docker"' >> ~/.zshrc
+source ~/.zshrc
+
+# Hoặc sử dụng đường dẫn đầy đủ
+/Applications/Docker.app/Contents/Resources/bin/docker compose up -d
+```
+
+### Không thấy data trên Dashboard
+
+1. Kiểm tra đã đăng nhập chưa
+2. Kiểm tra `branch_id` đúng: `branch-main-001`
+3. Kiểm tra Backend logs có lỗi không
 
 ---
 
-## Cấu Trúc Project
+## 📞 Hỗ Trợ
 
-```
-app/backend/
-├── app/
-│   ├── main.py              # Entry point & Kafka Consumer
-│   ├── api/                 # API routes
-│   │   ├── auth.py
-│   │   ├── cameras.py
-│   │   ├── staff.py
-│   │   ├── dashboard.py
-│   │   ├── food.py
-│   │   └── websocket.py
-│   ├── db/                  # Database config
-│   ├── models/              # SQLAlchemy models
-│   ├── schemas/             # Pydantic schemas
-│   └── services/            # Services
-│       └── kafka_service.py # Kafka Consumer & Handlers
-├── docker-compose.yml       # Docker services
-├── SETUP_DOCKER.md          # Hướng dẫn Docker
-├── requirements.txt
-└── .env
-```
+Nếu gặp lỗi không có trong danh sách, kiểm tra:
 
----
-
-## Các Kafka Topics
-
-| Topic | Mô tả |
-|-------|-------|
-| `camera.commands` | Commands từ Backend → AI |
-| `ai.config` | AI Configuration |
-| `ai.face.detections` | Face detection results |
-| `ai.action.detections` | HAR (Human Action Recognition) |
-| `ai.food.detections` | Food QC results |
-| `ai.customer.detections` | Customer flow detection |
-| `ai.tracking` | Human counting/tracking |
+1. Docker Desktop đang chạy
+2. Ports 5432, 6379, 8080, 8082, 9092 không bị chiếm
+3. Python và Node.js đúng phiên bản

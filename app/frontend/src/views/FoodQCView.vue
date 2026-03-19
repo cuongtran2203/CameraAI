@@ -221,31 +221,40 @@
 
                 <div class="flex gap-2 rounded-lg bg-slate-100 p-1 dark:bg-slate-950">
                   <button
-                    class="flex-1 rounded-md px-3 py-2 text-xs font-bold transition-all"
+                    class="flex-1 rounded-md px-3 py-2 text-xs font-bold transition-all flex items-center justify-center gap-1"
                     :class="activeFilter === 'all'
                       ? 'bg-white text-primary shadow-sm dark:bg-slate-800'
                       : 'text-slate-500 hover:bg-white/50 dark:hover:bg-slate-800/50'"
                     @click="handleFilterClick('all')"
                   >
                     All
+                    <span class="bg-slate-200 dark:bg-slate-700 px-1.5 py-0.5 rounded text-[10px]">
+                      {{ tabStates.all.items.length }}
+                    </span>
                   </button>
                   <button
-                    class="flex-1 rounded-md px-3 py-2 text-xs font-bold transition-all"
+                    class="flex-1 rounded-md px-3 py-2 text-xs font-bold transition-all flex items-center justify-center gap-1"
                     :class="activeFilter === 'passed'
-                      ? 'bg-white text-primary shadow-sm dark:bg-slate-800'
+                      ? 'bg-white text-green-600 shadow-sm dark:bg-slate-800'
                       : 'text-slate-500 hover:bg-white/50 dark:hover:bg-slate-800/50'"
                     @click="handleFilterClick('passed')"
                   >
                     Passed
+                    <span class="bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400 px-1.5 py-0.5 rounded text-[10px]">
+                      {{ tabStates.passed.items.length }}
+                    </span>
                   </button>
                   <button
-                    class="flex-1 rounded-md px-3 py-2 text-xs font-bold transition-all"
+                    class="flex-1 rounded-md px-3 py-2 text-xs font-bold transition-all flex items-center justify-center gap-1"
                     :class="activeFilter === 'failed'
-                      ? 'bg-white text-primary shadow-sm dark:bg-slate-800'
+                      ? 'bg-white text-red-600 shadow-sm dark:bg-slate-800'
                       : 'text-slate-500 hover:bg-white/50 dark:hover:bg-slate-800/50'"
                     @click="handleFilterClick('failed')"
                   >
                     Failed
+                    <span class="bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 px-1.5 py-0.5 rounded text-[10px]">
+                      {{ tabStates.failed.items.length }}
+                    </span>
                   </button>
                 </div>
               </div>
@@ -328,22 +337,50 @@
                 </div>
               </div>
 
-              <div class="border-t border-slate-200 bg-slate-50 p-4 text-center dark:border-slate-800 dark:bg-slate-800/50">
-                <button
-                  v-if="!showFullLog"
-                  class="text-sm font-bold text-primary hover:underline"
-                  @click="viewFullLog(activeFilter)"
-                >
-                  View Full Analysis Log
-                </button>
+              <!-- Load More & Collapse Controls -->
+              <div class="border-t border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-800/50">
+                <div class="flex items-center justify-between gap-2">
+                  <!-- Left: Load More / All Loaded -->
+                  <div class="flex-1">
+                    <button
+                      v-if="hasMoreItems"
+                      class="flex items-center justify-center gap-2 text-sm font-bold text-primary hover:text-primary/80 transition-colors"
+                      @click="loadMore"
+                      :disabled="isLoadingMore"
+                    >
+                      <span v-if="isLoadingMore" class="h-4 w-4 animate-spin rounded-full border-b-2 border-primary"></span>
+                      <span v-else class="material-symbols-outlined text-lg">expand_more</span>
+                      {{ isLoadingMore ? 'Loading...' : `Load More (${currentTabState.items.length - currentTabState.visibleCount} remaining)` }}
+                    </button>
+                    <span v-else class="text-xs text-slate-400">
+                      {{ currentTabState.items.length }} items loaded
+                    </span>
+                  </div>
 
-                <button
-                  v-else
-                  class="text-sm font-bold text-slate-600 hover:underline dark:text-slate-300"
-                  @click="collapseFullLog(activeFilter)"
-                >
-                  Back to Preview
-                </button>
+                  <!-- Right: Collapse / Back to Top -->
+                  <div class="flex items-center gap-2">
+                    <!-- Back to Top -->
+                    <button
+                      v-if="hasMoreItems || currentTabState.items.length > currentTabState.INITIAL_COUNT"
+                      class="flex items-center gap-1 text-xs text-slate-500 hover:text-primary transition-colors"
+                      @click="backToTop"
+                      title="Back to Top"
+                    >
+                      <span class="material-symbols-outlined text-base">keyboard_arrow_up</span>
+                      Top
+                    </button>
+
+                    <!-- Collapse (reset to initial) -->
+                    <button
+                      v-if="currentTabState.visibleCount > currentTabState.INITIAL_COUNT"
+                      class="flex items-center gap-1 rounded-lg bg-slate-200 px-2 py-1 text-xs font-medium text-slate-600 hover:bg-slate-300 transition-colors dark:bg-slate-700 dark:text-slate-300 dark:hover:bg-slate-600"
+                      @click="collapseList"
+                    >
+                      <span class="material-symbols-outlined text-base">unfold_less</span>
+                      Collapse
+                    </button>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -448,9 +485,10 @@ const isWsConnected = ref(false)
 
 const createTabState = () => ({
   items: [],         // All items
-  showFullLog: false,
+  visibleCount: 10,  // Number of items currently visible
   scrollTop: 0,
-  previewCount: 10   // Number of items to show in preview mode
+  INITIAL_COUNT: 10,  // Initial load
+  LOAD_MORE_COUNT: 20, // Items to add on "Load More"
 })
 
 const tabStates = ref({
@@ -461,21 +499,20 @@ const tabStates = ref({
 
 const currentTabState = computed(() => tabStates.value[activeFilter.value] || createTabState())
 
-// Computed: return items based on showFullLog mode
+// Computed: return items based on visibleCount
 const qcResults = computed(() => {
   const tab = currentTabState.value
   if (!tab.items.length) return []
 
-  if (tab.showFullLog) {
-    // Show all items (max 500)
-    return tab.items.slice(0, 500)
-  } else {
-    // Show preview (first 10 items)
-    return tab.items.slice(0, tab.previewCount)
-  }
+  // Show items up to visibleCount
+  return tab.items.slice(0, tab.visibleCount)
 })
 
-const showFullLog = computed(() => currentTabState.value.showFullLog || false)
+// Check if there are more items to load
+const hasMoreItems = computed(() => {
+  const tab = currentTabState.value
+  return tab.items.length > tab.visibleCount
+})
 
 // ---------------------------------------------
 // Computed Properties for Real-time Display
@@ -571,7 +608,7 @@ const fetchTodayQCData = async () => {
       start_date: startDate,
       end_date: startDate,
       page: 1,
-      page_size: 1000 // Get up to 1000 items
+      page_size: 100 // Get up to 100 items (backend max)
     })
 
     const allData = Array.isArray(response) ? response : []
@@ -640,41 +677,43 @@ const handleLogScroll = () => {
   tab.scrollTop = logContainerRef.value.scrollTop || 0
 }
 
-const viewFullLog = async (tabKey = activeFilter.value) => {
-  const tab = tabStates.value[tabKey]
+// Load more items
+const loadMore = () => {
+  const tab = currentTabState.value
   if (!tab) return
 
-  // Save scroll position before switching
-  if (tabKey === activeFilter.value) {
-    saveScrollPosition(tabKey)
-  }
+  isLoadingMore.value = true
 
-  // Toggle to full log view - no API call needed, data already loaded
-  tab.showFullLog = true
+  // Simulate slight delay for better UX
+  setTimeout(() => {
+    tab.visibleCount += tab.LOAD_MORE_COUNT
+    isLoadingMore.value = false
+  }, 200)
+}
 
-  // Restore scroll position after toggle
-  if (tabKey === activeFilter.value) {
-    await restoreScrollPosition(tabKey)
+// Back to top of list
+const backToTop = () => {
+  if (logContainerRef.value) {
+    logContainerRef.value.scrollTo({
+      top: 0,
+      behavior: 'smooth'
+    })
   }
 }
 
-const collapseFullLog = async (tabKey = activeFilter.value) => {
-  const tab = tabStates.value[tabKey]
+// Collapse list back to initial
+const collapseList = () => {
+  const tab = currentTabState.value
   if (!tab) return
 
-  // Save scroll position before switching
-  if (tabKey === activeFilter.value) {
-    saveScrollPosition(tabKey)
-  }
+  tab.visibleCount = tab.INITIAL_COUNT
 
-  // Toggle back to preview - no API call needed
-  tab.showFullLog = false
-  tab.scrollTop = 0
-
-  // Restore scroll position after toggle
-  if (tabKey === activeFilter.value) {
-    await restoreScrollPosition(tabKey)
-  }
+  // Scroll to top after collapse
+  nextTick(() => {
+    if (logContainerRef.value) {
+      logContainerRef.value.scrollTo({ top: 0, behavior: 'smooth' })
+    }
+  })
 }
 
 const handleFilterClick = async (filter) => {
