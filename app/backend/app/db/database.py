@@ -32,8 +32,12 @@ class Settings(BaseSettings):
     # Redis
     REDIS_URL: str = os.getenv("REDIS_URL", "redis://localhost:6379")
 
+    # AI service
+    AI_SERVICE_URL: str = os.getenv("AI_SERVICE_URL", "http://localhost:8000")
+
     class Config:
         env_file = ".env"
+        extra = "ignore"
 
 
 settings = Settings()

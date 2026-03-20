@@ -1,6 +1,7 @@
 <template>
   <div class="bg-background-light dark:bg-background-dark min-h-screen h-full text-slate-900 dark:text-slate-100">
     <div class="layout-container flex h-full flex-col">
+      <!-- Header -->
       <header
         class="flex items-center justify-between whitespace-nowrap border-b border-slate-200 bg-white px-10 py-3 dark:border-slate-800 dark:bg-slate-900"
       >
@@ -13,438 +14,300 @@
               Camera Analyst QC
             </h2>
           </div>
-
           <nav class="flex items-center gap-6">
-            <router-link
-              to="/"
-              class="text-sm font-medium text-slate-600 transition-colors hover:text-primary dark:text-slate-300"
-            >
-              Dashboard
-            </router-link>
-            <router-link
-              to="/live-view"
-              class="text-sm font-medium text-slate-600 transition-colors hover:text-primary dark:text-slate-300"
-            >
-              Logs
-            </router-link>
-            <router-link
-              to="/camera-config"
-              class="text-sm font-medium text-slate-600 transition-colors hover:text-primary dark:text-slate-300"
-            >
-              Cameras
-            </router-link>
-            <span class="border-b-2 border-primary text-sm font-bold text-slate-900 dark:text-white">
-              Analysis
-            </span>
+            <router-link to="/" class="text-sm font-medium text-slate-600 hover:text-primary dark:text-slate-300">Dashboard</router-link>
+            <router-link to="/live-view" class="text-sm font-medium text-slate-600 hover:text-primary dark:text-slate-300">Logs</router-link>
+            <router-link to="/camera-config" class="text-sm font-medium text-slate-600 hover:text-primary dark:text-slate-300">Cameras</router-link>
+            <span class="border-b-2 border-primary text-sm font-bold text-slate-900 dark:text-white">Analysis</span>
           </nav>
         </div>
-
         <div class="flex flex-1 items-center justify-end gap-4">
-          <label class="flex h-10 min-w-40 max-w-64 flex-col">
-            <div
-              class="flex h-full w-full flex-1 items-stretch overflow-hidden rounded-xl border border-slate-200 dark:border-slate-700"
-            >
-              <div class="flex items-center justify-center bg-slate-50 pl-4 text-slate-400 dark:bg-slate-800">
-                <span class="material-symbols-outlined">search</span>
-              </div>
-              <input
-                class="form-input min-w-0 flex-1 border-none bg-slate-50 text-sm placeholder:text-slate-400 focus:ring-0 dark:bg-slate-800"
-                placeholder="Search batch or ID..."
-                value=""
-              />
-            </div>
-          </label>
-
           <div class="flex gap-2">
-            <button
-              class="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100 text-slate-600 transition-all hover:bg-primary/10 hover:text-primary dark:bg-slate-800 dark:text-slate-300"
-            >
+            <button class="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100 text-slate-600 hover:bg-primary/10 hover:text-primary dark:bg-slate-800 dark:text-slate-300">
               <span class="material-symbols-outlined">notifications</span>
             </button>
-            <button
-              class="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100 text-slate-600 transition-all hover:bg-primary/10 hover:text-primary dark:bg-slate-800 dark:text-slate-300"
-            >
+            <button class="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100 text-slate-600 hover:bg-primary/10 hover:text-primary dark:bg-slate-800 dark:text-slate-300">
               <span class="material-symbols-outlined">account_circle</span>
             </button>
           </div>
-
-          <div
-            class="size-10 rounded-full border-2 border-primary/20 bg-cover bg-center bg-no-repeat"
-            data-alt="User profile avatar of a technician"
-            style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuChevDoC59IzQ13P3sgsC-lztsIEhnhnH2eJUW-2hk4X6lfloMAc-95mG5IkL7qTK5re15rHjMU-dc3VgVXgT_vgDlt4J3pVN7hGC8H-zpR8wcDYYKob-dl1QJCuNAZ59aPxjAFdeGJU8pJ159xlrAStn8tWTks6ZNCJwVFt28sfZzQUg7rCJSQbG_lZmSEIWTg0WGp0irHI6Ouy9Nd-9FcggqGbXPB38mehAiv2yLswCPLEwPCjQJVO1ugAtDMLIEy-uzpyNxKY-A");'
-          />
+          <div class="size-10 rounded-full border-2 border-primary/20 bg-cover bg-center bg-no-repeat"
+            style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuChevDoC59IzQ13P3sgsC-lztsIEhnhnH2eJUW-2hk4X6lfloMAc-95mG5IkL7qTK5re15rHjMU-dc3VgVXgT_vgDlt4J3pVN7hGC8H-zpR8wcDYYKob-dl1QJCuNAZ59aPxjAFdeGJU8pJ159xlrAStn8tWTks6ZNCJwVFt28sfZzQUg7rCJSQbG_lZmSEIWTg0WGp0irHI6Ouy9Nd-9FcggqGbXPB38mehAiv2yLswCPLEwPCjQJVO1ugAtDMLIEy-uzpyNxKY-A");' />
         </div>
       </header>
 
       <main class="mx-auto flex w-full max-w-[1920px] flex-1 flex-col gap-6 overflow-y-auto p-6 lg:px-10">
+
+        <!-- Title Row -->
         <div class="flex flex-col items-start justify-between gap-4 md:flex-row md:items-end">
           <div class="flex flex-col gap-1">
             <div class="mb-1 flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400">
               <span>Quality Control</span>
               <span class="material-symbols-outlined text-xs">chevron_right</span>
-              <span class="font-medium text-primary">QC Screen 7 - Production Line A</span>
+              <span class="font-medium text-primary">AI Food Retrieval</span>
             </div>
-            <h1 class="text-3xl font-black tracking-tight text-slate-900 dark:text-white">
-              Live Food Quality Inspection
-            </h1>
-            <p class="text-slate-500 dark:text-slate-400">
-              Comparing real-time camera feed against Master Reference Batch A-102
-            </p>
+            <h1 class="text-3xl font-black tracking-tight text-slate-900 dark:text-white">Food Quality Inspection</h1>
+            <p class="text-slate-500 dark:text-slate-400">Upload food image to search and compare against reference database</p>
           </div>
-
           <div class="flex gap-3">
-            <button
-              class="flex h-11 items-center gap-2 rounded-xl bg-slate-200 px-6 text-sm font-bold text-slate-700 transition-all hover:bg-slate-300 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
-            >
-              <span class="material-symbols-outlined">settings</span>
-              Configure
+            <button class="flex h-11 items-center gap-2 rounded-xl bg-slate-200 px-6 text-sm font-bold text-slate-700 hover:bg-slate-300 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700">
+              <span class="material-symbols-outlined">settings</span>Configure
             </button>
-            <button
-              class="flex h-11 items-center gap-2 rounded-xl bg-primary px-6 text-sm font-bold text-white shadow-lg shadow-primary/20 transition-all hover:bg-primary/90"
-            >
-              <span class="material-symbols-outlined">description</span>
-              Export Report
+            <button class="flex h-11 items-center gap-2 rounded-xl bg-primary px-6 text-sm font-bold text-white shadow-lg shadow-primary/20 hover:bg-primary/90">
+              <span class="material-symbols-outlined">description</span>Export Report
             </button>
           </div>
         </div>
 
+        <!-- Main Grid -->
         <div class="grid grid-cols-12 gap-6">
+
+          <!-- Left Column -->
           <div class="col-span-12 flex flex-col gap-6 lg:col-span-8">
+
+            <!-- Upload + Reference Row -->
             <div class="grid grid-cols-2 gap-4">
+
+              <!-- Best Match Reference -->
               <div class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
                 <div class="mb-4 flex items-center justify-between">
                   <h3 class="flex items-center gap-2 font-bold">
                     <span class="material-symbols-outlined text-primary">verified_user</span>
-                    Master Reference
+                    Best Match
                   </h3>
-                  <span class="rounded bg-slate-100 px-2 py-1 text-xs text-slate-500 dark:bg-slate-800">
-                    Ref: A-102
+                  <span v-if="bestMatch" class="rounded bg-green-100 px-2 py-1 text-xs font-bold text-green-600 dark:bg-green-900/30 dark:text-green-400">
+                    {{ displayMatchScore }}%
                   </span>
+                  <span v-else class="rounded bg-slate-100 px-2 py-1 text-xs text-slate-500 dark:bg-slate-800">No match</span>
                 </div>
 
                 <div class="relative aspect-video w-full overflow-hidden rounded-lg border border-slate-200 bg-slate-100 dark:border-slate-700 dark:bg-slate-800">
-                  <div
-                    class="absolute inset-0 bg-cover bg-center"
-                    style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuBksv3P0wCFxjYVxRvCLuEAho47vWkxyUeUU6G0_kb6bNujBDTGJbGjHtgnwH6FZCtvkGgdor9fIxLa-0tpgRq1xBzOBz1jYY5xc57Tf4r9h9QloqstUn31H2fNaVo8CK_cGJUVbmc5uD-CdJmZbOc5ik1gbL9u30fE38ijMxqv_LTvSXg8QliwLOKSmV8j33qzZTCamDCdW09CvHXyrXl0ixWzbYKs_7kBGCzDjI_iu0AmYe73WAYMOlEAcisDOVdlzRONq_w-3DI');"
+                  <img
+                    v-if="bestMatch"
+                    :src="getImageUrl(bestMatch.image_path)"
+                    :alt="bestMatch.id"
+                    class="absolute inset-0 h-full w-full object-contain"
+                    @error="(e) => e.target.style.display = 'none'"
                   />
-                  <div class="absolute left-3 top-3 rounded bg-black/60 px-2 py-0.5 text-[10px] text-white backdrop-blur-md">
-                    STATIC REFERENCE
+                  <div class="absolute inset-0 flex flex-col items-center justify-center gap-2">
+                    <span class="material-symbols-outlined text-5xl text-slate-300">restaurant</span>
+                    <p class="text-xs text-slate-400">{{ bestMatch ? bestMatch.id : 'Upload to search' }}</p>
                   </div>
                 </div>
 
-                <p class="mt-3 text-sm italic text-slate-500 dark:text-slate-400">
-                  "Ideal texture, color saturation, and ingredient distribution."
-                </p>
+                <div v-if="bestMatch" class="mt-3 flex items-center gap-2">
+                  <span
+                    class="rounded-full px-3 py-1 text-xs font-bold"
+                    :class="matchStatusBadgeClass"
+                  >
+                    {{ matchStatusLabel }}
+                  </span>
+                  <span class="text-xs text-slate-400">{{ bestMatch.description?.slice(0, 60) }}...</span>
+                </div>
               </div>
 
-              <div
-                class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm ring-2 ring-primary/20 dark:border-slate-800 dark:bg-slate-900"
-              >
+              <!-- Upload to Search -->
+              <div class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm ring-2 ring-primary/20 dark:border-slate-800 dark:bg-slate-900">
                 <div class="mb-4 flex items-center justify-between">
                   <h3 class="flex items-center gap-2 font-bold">
-                    <span class="material-symbols-outlined animate-pulse text-red-500">videocam</span>
-                    Live Stream
+                    <span class="material-symbols-outlined text-primary">upload_image</span>
+                    Upload to Search
                   </h3>
-                  <span class="rounded bg-red-100 px-2 py-1 text-xs font-bold text-red-600 dark:bg-red-900/30 dark:text-red-400">
-                    LIVE: {{ currentResult.camera_id || 'NODE 04' }}
-                  </span>
+                  <span v-if="uploadedImageUrl" class="rounded bg-green-100 px-2 py-1 text-xs font-bold text-green-600 dark:bg-green-900/30 dark:text-green-400">READY</span>
+                  <span v-else class="rounded bg-slate-100 px-2 py-1 text-xs text-slate-500 dark:bg-slate-800">AWAITING</span>
                 </div>
 
-                <div class="relative aspect-video w-full overflow-hidden rounded-lg border border-slate-200 bg-slate-100 dark:border-slate-700 dark:bg-slate-800">
-                  <div
-                    class="absolute inset-0 bg-cover bg-center"
-                    style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuBjhmAyj2BGrMD_GOhDV9gFtj3VvHHKDcxT3J4rGwZaKONUIVFNNyx-xxAtYYBib32SuQddaVCxjdGBgrM28exOBfxbb5ynqLFlD1x72cAslxKLrUxQkS1n5E1z5BD65pk4ys5TMD187mu6pFc__lBexyUR8CYvgAbo7TzRxtvTkBoeHlhwgbVsk0Jo5o-3hMTYcNMNAvj527KuYTnePen2NgDmsAi8Qj9zTuZpyZBxb01EN-6Ef1VbtNhH4aaEMXTZUY_HagYsDoU');"
-                  />
-                  <div class="pointer-events-none absolute inset-0 border-[3px] border-primary/40" />
-                  <div class="absolute bottom-3 right-3 rounded bg-primary px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white">
-                    {{ currentResult.result_status ? 'Analyzing...' : 'Waiting...' }}
+                <div
+                  class="relative aspect-video w-full cursor-pointer overflow-hidden rounded-lg border-2 border-dashed border-slate-300 bg-slate-50 transition-all hover:border-primary/50 dark:border-slate-600 dark:bg-slate-800"
+                  :class="{ 'border-primary bg-primary/5': uploadedImageUrl }"
+                  @click="openImagePicker"
+                >
+                  <img v-if="uploadedImageUrl" :src="uploadedImageUrl" alt="Uploaded" class="absolute inset-0 h-full w-full object-contain" />
+                  <div v-if="!uploadedImageUrl" class="absolute inset-0 flex flex-col items-center justify-center gap-2">
+                    <span class="material-symbols-outlined text-4xl text-slate-400">add_photo_alternate</span>
+                    <p class="text-sm font-medium text-slate-500">Click to upload</p>
+                    <p class="text-xs text-slate-400">JPG, PNG, WEBP (max 10MB)</p>
+                  </div>
+                  <div v-if="uploadedImageUrl" class="absolute inset-0 flex items-center justify-center gap-2 bg-black/40 opacity-0 transition-opacity hover:opacity-100">
+                    <button class="flex items-center gap-1 rounded-lg bg-white px-3 py-1.5 text-xs font-bold text-slate-700 shadow hover:bg-slate-100" @click.stop="openImagePicker">
+                      <span class="material-symbols-outlined text-sm">refresh</span>Change
+                    </button>
+                    <button class="flex items-center gap-1 rounded-lg bg-red-500 px-3 py-1.5 text-xs font-bold text-white shadow hover:bg-red-600" @click.stop="resetSearch">
+                      <span class="material-symbols-outlined text-sm">close</span>Remove
+                    </button>
                   </div>
                 </div>
+
+                <input ref="fileInputRef" type="file" accept="image/*" class="hidden" @change="handleImageSelected" />
 
                 <div class="mt-3 flex items-center justify-between">
-                  <p class="text-sm text-slate-500 dark:text-slate-400">Timestamp: {{ liveTimestamp }}</p>
-                  <div class="flex gap-1">
-                    <div class="size-2 rounded-full" :class="isWsConnected ? 'bg-primary animate-pulse' : 'bg-slate-300'" />
-                    <div class="size-2 rounded-full bg-primary/30" />
-                    <div class="size-2 rounded-full bg-primary/30" />
-                  </div>
+                  <p class="max-w-[180px] truncate text-xs text-slate-400">{{ uploadedImageFile?.name || 'No file selected' }}</p>
+                  <button
+                    class="flex items-center gap-2 rounded-xl bg-primary px-5 py-2 text-sm font-bold text-white shadow hover:bg-primary/90 disabled:opacity-50"
+                    :disabled="!uploadedImageFile || isSearching"
+                    @click="submitSearch"
+                  >
+                    <span v-if="isSearching" class="h-4 w-4 animate-spin rounded-full border-b-2 border-white" />
+                    <span v-else class="material-symbols-outlined text-lg">search</span>
+                    {{ isSearching ? 'Searching...' : 'Search' }}
+                  </button>
+                </div>
+
+                <div v-if="searchError" class="mt-2 flex items-center gap-2 rounded-lg bg-red-50 px-3 py-2 text-xs text-red-600 dark:bg-red-900/20">
+                  <span class="material-symbols-outlined text-sm">error</span>{{ searchError }}
                 </div>
               </div>
             </div>
 
+            <!-- Score Card -->
             <div class="flex items-center justify-between rounded-xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-              <div class="flex flex-col">
-                <span class="text-sm font-medium uppercase tracking-widest text-slate-500 dark:text-slate-400">
-                  Similarity Score
-                </span>
-                <div class="flex items-baseline gap-3">
-                  <h2 class="text-5xl font-black text-slate-900 dark:text-white">
-                    {{ displaySimilarityScore }}%
-                  </h2>
-                  <span class="flex items-center gap-1 font-bold" :class="scoreTrend >= 0 ? 'text-green-500' : 'text-red-500'">
-                    <span class="material-symbols-outlined">{{ scoreTrend >= 0 ? 'trending_up' : 'trending_down' }}</span>
-                    {{ scoreTrend >= 0 ? '+' : '' }}{{ scoreTrend }}%
-                  </span>
+              <template v-if="bestMatch">
+                <div class="flex flex-col">
+                  <span class="text-xs font-medium uppercase tracking-widest text-slate-500">Best Match Score</span>
+                  <div class="flex items-baseline gap-3">
+                    <h2 class="text-5xl font-black text-slate-900 dark:text-white">{{ displayMatchScore }}%</h2>
+                    <span class="flex items-center gap-1 text-sm font-bold text-slate-400">
+                      <span class="material-symbols-outlined text-base">psychology</span>AI
+                    </span>
+                  </div>
                 </div>
-              </div>
+                <div class="max-w-md flex-1 px-10">
+                  <div class="flex h-4 w-full overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
+                    <div class="h-full transition-all duration-500" :class="matchScoreBarColor" :style="{ width: displayMatchScore + '%' }" />
+                  </div>
+                  <div class="mt-2 flex justify-between text-[10px] font-bold uppercase text-slate-400">
+                    <span>Pass (&gt;= 85%)</span><span>Optimal (95%+)</span>
+                  </div>
+                </div>
+                <div class="flex flex-col items-end gap-1">
+                  <span class="rounded-full px-3 py-1 text-sm font-bold" :class="matchStatusBadgeClass">{{ matchStatusLabel }}</span>
+                  <div class="flex gap-3 text-xs text-slate-400">
+                    <span>Visual: {{ Math.round((bestMatch.base_score || 0) * 100) }}%</span>
+                    <span>Ingr: {{ Math.round((bestMatch.ingredient_score || 0) * 100) }}%</span>
+                  </div>
+                </div>
+              </template>
+              <template v-else>
+                <div class="flex flex-col">
+                  <span class="text-xs font-medium uppercase tracking-widest text-slate-500">Best Match Score</span>
+                  <div class="flex items-baseline gap-3">
+                    <h2 class="text-5xl font-black text-slate-300 dark:text-slate-600">--%</h2>
+                    <span class="text-sm text-slate-400">Upload image to search</span>
+                  </div>
+                </div>
+                <div class="max-w-md flex-1 px-10">
+                  <div class="flex h-4 w-full overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
+                    <div class="h-full w-0 bg-slate-300" />
+                  </div>
+                  <div class="mt-2 flex justify-between text-[10px] font-bold uppercase text-slate-400">
+                    <span>Pass (&gt;= 85%)</span><span>Optimal (95%+)</span>
+                  </div>
+                </div>
+                <div class="flex flex-col items-end">
+                  <span class="rounded-full bg-slate-100 px-3 py-1 text-sm font-bold text-slate-400 dark:bg-slate-800">AWAITING</span>
+                </div>
+              </template>
+            </div>
 
-              <div class="max-w-md flex-1 px-10">
-                <div class="flex h-4 w-full overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
-                  <div
-                    class="h-full transition-all duration-500"
-                    :class="scoreStatusColor"
-                    :style="{ width: displaySimilarityScore + '%' }"
-                  />
+            <!-- Match Detail -->
+            <div v-if="bestMatch" class="rounded-xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+              <h3 class="mb-4 font-bold text-slate-900 dark:text-white">Match Details</h3>
+              <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+                <!-- Description -->
+                <div>
+                  <p class="mb-2 text-xs font-bold uppercase tracking-wider text-slate-500">AI Description</p>
+                  <p class="text-sm leading-relaxed text-slate-600 dark:text-slate-300">
+                    {{ bestMatch.description || searchResult?.query_description || 'N/A' }}
+                  </p>
                 </div>
-                <div class="mt-2 flex justify-between text-[10px] font-bold uppercase text-slate-400">
-                  <span>Pass (>= {{ liveData.thresholds.pass || 90 }}%)</span>
-                  <span>Optimal ({{ liveData.thresholds.optimal || 95 }}%+)</span>
+                <!-- Ingredients -->
+                <div>
+                  <p class="mb-2 text-xs font-bold uppercase tracking-wider text-slate-500">Ingredients</p>
+                  <div class="flex flex-wrap gap-1.5">
+                    <span v-for="ing in bestMatch.ingredients" :key="ing"
+                      class="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
+                      {{ ing }}
+                    </span>
+                    <span v-for="ing in (searchResult?.query_ingredients || [])" :key="'q-' + ing"
+                      class="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-500 dark:bg-slate-800 dark:text-slate-400">
+                      {{ ing }}
+                    </span>
+                  </div>
                 </div>
-              </div>
-
-              <div class="flex flex-col items-end">
-                <span
-                  class="rounded-full px-3 py-1 text-sm font-bold"
-                  :class="statusBadgeClass"
-                >
-                  {{ statusLabel }}
-                </span>
-                <span class="mt-1 text-xs text-slate-400">Confidence: {{ displayConfidence }}</span>
               </div>
             </div>
           </div>
 
+          <!-- Right Column: Recent Inspections -->
           <div class="col-span-12 flex flex-col gap-6 lg:col-span-4">
             <div class="flex h-full flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
               <div class="border-b border-slate-200 bg-slate-50/70 p-4 dark:border-slate-800 dark:bg-slate-800/60">
-                <h3 class="mb-4 font-bold text-slate-900 dark:text-white">Recent Inspections</h3>
-
-                <div class="flex gap-2 rounded-lg bg-slate-100 p-1 dark:bg-slate-950">
-                  <button
-                    class="flex-1 rounded-md px-3 py-2 text-xs font-bold transition-all flex items-center justify-center gap-1"
-                    :class="activeFilter === 'all'
-                      ? 'bg-white text-primary shadow-sm dark:bg-slate-800'
-                      : 'text-slate-500 hover:bg-white/50 dark:hover:bg-slate-800/50'"
-                    @click="handleFilterClick('all')"
-                  >
-                    All
-                    <span class="bg-slate-200 dark:bg-slate-700 px-1.5 py-0.5 rounded text-[10px]">
-                      {{ allCount }}
-                    </span>
-                  </button>
-                  <button
-                    class="flex-1 rounded-md px-3 py-2 text-xs font-bold transition-all flex items-center justify-center gap-1"
-                    :class="activeFilter === 'passed'
-                      ? 'bg-white text-green-600 shadow-sm dark:bg-slate-800'
-                      : 'text-slate-500 hover:bg-white/50 dark:hover:bg-slate-800/50'"
-                    @click="handleFilterClick('passed')"
-                  >
-                    Passed
-                    <span class="bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400 px-1.5 py-0.5 rounded text-[10px]">
-                      {{ passedCount }}
-                    </span>
-                  </button>
-                  <button
-                    class="flex-1 rounded-md px-3 py-2 text-xs font-bold transition-all flex items-center justify-center gap-1"
-                    :class="activeFilter === 'failed'
-                      ? 'bg-white text-red-600 shadow-sm dark:bg-slate-800'
-                      : 'text-slate-500 hover:bg-white/50 dark:hover:bg-slate-800/50'"
-                    @click="handleFilterClick('failed')"
-                  >
-                    Failed
-                    <span class="bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 px-1.5 py-0.5 rounded text-[10px]">
-                      {{ failedCount }}
+                <div class="mb-3 flex items-center justify-between">
+                  <h3 class="font-bold text-slate-900 dark:text-white">Recent Inspections</h3>
+                  <span class="rounded bg-primary/10 px-2 py-0.5 text-xs font-bold text-primary">
+                    {{ allCount }} results
+                  </span>
+                </div>
+                <div class="flex gap-1 rounded-lg bg-slate-100 p-1 dark:bg-slate-950">
+                  <button v-for="tab in ['all', 'passed', 'failed']" :key="tab"
+                    class="flex flex-1 items-center justify-center gap-1 rounded-md px-2 py-1.5 text-xs font-bold transition-all"
+                    :class="activeFilter === tab
+                      ? 'bg-white shadow-sm dark:bg-slate-800'
+                      : 'text-slate-500 hover:bg-white/50'"
+                    :style="activeFilter === tab ? { color: tab === 'passed' ? '#16a34a' : tab === 'failed' ? '#dc2626' : 'var(--color-primary, #3b82f6)' } : {}"
+                    @click="activeFilter = tab">
+                    {{ tab.charAt(0).toUpperCase() + tab.slice(1) }}
+                    <span class="rounded bg-slate-200 px-1 py-0.5 text-[10px] dark:bg-slate-700">
+                      {{ tab === 'all' ? allCount : tab === 'passed' ? passedCount : failedCount }}
                     </span>
                   </button>
                 </div>
               </div>
 
+              <!-- Inspection List -->
               <div ref="logContainerRef" class="qc-scroll-area overflow-y-auto">
-                <div class="relative min-h-full">
-                  <table class="w-full border-collapse text-left">
-                    <thead
-                      class="sticky top-0 z-20 border-b border-slate-200 bg-white/95 shadow-[0_1px_0_0_rgba(226,232,240,0.8)] backdrop-blur-sm dark:border-slate-700 dark:bg-slate-900/95"
-                    >
-                      <tr class="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                        <th class="px-4 py-3">Timestamp</th>
-                        <th class="px-4 py-3">Score</th>
-                        <th class="px-4 py-3 text-right">Status</th>
-                      </tr>
-                    </thead>
-
-                    <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
-                      <tr
-                        v-for="item in qcResults"
-                        :key="item.id"
-                        class="h-[56px]"
-                        :class="{
-                          'bg-red-50/30 dark:bg-red-900/10': item.result_status === 'failed',
-                          'bg-yellow-50/30 dark:bg-yellow-900/10': item.result_status === 'warning',
-                          'bg-slate-50 dark:hover:bg-slate-800': item.result_status === 'pending' || item.result_status === 'passed',
-                        }"
-                      >
-                        <td class="px-4 py-3">
-                          <div class="flex flex-col justify-center leading-tight">
-                            <span class="text-sm font-medium">
-                              {{ formatTime(item.checked_at) }}
-                            </span>
-                            <span class="mt-1 text-[10px] text-slate-400">
-                              {{ item.food_item || 'Batch ' + (item.batch_id || getBatchId(item.id)) }}
-                            </span>
-                          </div>
-                        </td>
-
-                        <td class="px-4 py-3 text-sm font-bold" :class="item.result_status === 'failed' ? 'text-red-500' : ''">
-                          {{ Math.round(item.similarity_score * 100) }}%
-                        </td>
-
-                        <td class="px-4 py-3 text-right">
-                          <span
-                            v-if="item.result_status === 'passed'"
-                            class="inline-flex items-center rounded bg-green-100 px-2 py-0.5 text-xs font-bold text-green-700 dark:bg-green-900/30 dark:text-green-400"
-                          >
-                            PASS
-                          </span>
-                          <span
-                            v-else-if="item.result_status === 'failed'"
-                            class="inline-flex items-center rounded bg-red-100 px-2 py-0.5 text-xs font-bold text-red-700 dark:bg-red-900/30 dark:text-red-400"
-                          >
-                            FAIL
-                          </span>
-                          <span
-                            v-else-if="item.result_status === 'warning'"
-                            class="inline-flex items-center rounded bg-yellow-100 px-2 py-0.5 text-xs font-bold text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400"
-                          >
-                            WARN
-                          </span>
-                          <span
-                            v-else
-                            class="inline-flex items-center rounded bg-slate-100 px-2 py-0.5 text-xs font-bold text-slate-500 dark:bg-slate-800 dark:text-slate-400"
-                          >
-                            {{ item.result_status?.toUpperCase() || 'N/A' }}
-                          </span>
-                        </td>
-                      </tr>
-
-                      <tr v-if="qcResults.length === 0">
-                        <td colspan="3" class="px-4 py-8 text-center text-slate-400">
-                          No data available
-                        </td>
-                      </tr>
-                    </tbody>
-                  </table>
-
-                  <div
-                    v-if="isLoading"
-                    class="absolute inset-0 z-30 flex items-center justify-center bg-white/60 backdrop-blur-[1px] dark:bg-slate-900/60"
-                  >
-                    <div class="h-8 w-8 animate-spin rounded-full border-b-2 border-primary" />
+                <div class="flex flex-col">
+                  <div v-if="qcResults.length === 0" class="flex flex-col items-center justify-center py-12 text-slate-400">
+                    <span class="material-symbols-outlined text-4xl">search_off</span>
+                    <p class="mt-2 text-sm">No results yet</p>
+                    <p class="text-xs">Upload an image to search</p>
                   </div>
 
-                  <div
-                    v-if="isLoadingMore"
-                    class="sticky bottom-0 z-10 flex items-center justify-center gap-2 border-t border-slate-200 bg-white/95 px-4 py-3 text-sm text-slate-400 dark:border-slate-700 dark:bg-slate-900/95"
-                  >
-                    <div class="h-4 w-4 animate-spin rounded-full border-b-2 border-primary" />
-                    Loading more...
+                  <div v-for="item in qcResults" :key="item.id"
+                    class="flex items-center gap-3 border-b border-slate-100 px-4 py-3 transition-colors hover:bg-slate-50 dark:border-slate-800 dark:hover:bg-slate-800/50"
+                    :class="item.result_status === 'failed' ? 'border-l-2 border-l-red-400' : 'border-l-2 border-l-green-400'">
+                    <!-- Food thumbnail -->
+                    <div class="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-slate-100 text-slate-400 dark:bg-slate-800">
+                      <span class="material-symbols-outlined text-lg">restaurant</span>
+                    </div>
+                    <!-- Info -->
+                    <div class="min-w-0 flex-1">
+                      <p class="truncate text-sm font-medium text-slate-900 dark:text-white">{{ item.food_name }}</p>
+                      <p class="text-[10px] text-slate-400">{{ formatTime(item.checked_at) }}</p>
+                    </div>
+                    <!-- Score + Status -->
+                    <div class="flex flex-shrink-0 flex-col items-end gap-1">
+                      <span class="text-sm font-bold" :class="item.result_status === 'failed' ? 'text-red-500' : 'text-green-600'">
+                        {{ item.score_pct }}%
+                      </span>
+                      <span class="rounded px-1.5 py-0.5 text-[10px] font-bold"
+                        :class="item.result_status === 'passed'
+                          ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                          : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'">
+                        {{ item.result_status === 'passed' ? 'PASS' : 'FAIL' }}
+                      </span>
+                    </div>
                   </div>
                 </div>
               </div>
 
-              <!-- Load More & Collapse Controls -->
+              <!-- Footer -->
               <div class="border-t border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-800/50">
-                <div class="flex items-center justify-between gap-2">
-                  <!-- Left: Load More / All Loaded -->
-                  <div class="flex-1">
-                    <button
-                      v-if="hasMoreItems"
-                      class="flex items-center justify-center gap-2 text-sm font-bold text-primary hover:text-primary/80 transition-colors"
-                      @click="loadMore"
-                      :disabled="isLoadingMore"
-                    >
-                      <span v-if="isLoadingMore" class="h-4 w-4 animate-spin rounded-full border-b-2 border-primary"></span>
-                      <span v-else class="material-symbols-outlined text-lg">expand_more</span>
-                      {{ isLoadingMore ? 'Loading...' : `Load More (${currentTabState.items.length - currentTabState.visibleCount} remaining)` }}
-                    </button>
-                    <span v-else class="text-xs text-slate-400">
-                      {{ currentTabState.items.length }} items loaded
-                    </span>
-                  </div>
-
-                  <!-- Right: Collapse / Back to Top -->
-                  <div class="flex items-center gap-2">
-                    <!-- Back to Top -->
-                    <button
-                      v-if="hasMoreItems || currentTabState.items.length > currentTabState.INITIAL_COUNT"
-                      class="flex items-center gap-1 text-xs text-slate-500 hover:text-primary transition-colors"
-                      @click="backToTop"
-                      title="Back to Top"
-                    >
-                      <span class="material-symbols-outlined text-base">keyboard_arrow_up</span>
-                      Top
-                    </button>
-
-                    <!-- Collapse (reset to initial) -->
-                    <button
-                      v-if="currentTabState.visibleCount > currentTabState.INITIAL_COUNT"
-                      class="flex items-center gap-1 rounded-lg bg-slate-200 px-2 py-1 text-xs font-medium text-slate-600 hover:bg-slate-300 transition-colors dark:bg-slate-700 dark:text-slate-300 dark:hover:bg-slate-600"
-                      @click="collapseList"
-                    >
-                      <span class="material-symbols-outlined text-base">unfold_less</span>
-                      Collapse
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div class="grid grid-cols-1 gap-4 md:grid-cols-4">
-          <div class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-            <div class="flex items-center gap-3">
-              <div class="flex size-10 items-center justify-center rounded-lg bg-orange-100 text-primary dark:bg-orange-900/30">
-                <span class="material-symbols-outlined">palette</span>
-              </div>
-              <div>
-                <p class="text-xs font-bold uppercase tracking-wider text-slate-500">Color Match</p>
-                <p class="text-xl font-bold">{{ currentResult.color_score || '--' }}%</p>
-              </div>
-            </div>
-          </div>
-
-          <div class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-            <div class="flex items-center gap-3">
-              <div class="flex size-10 items-center justify-center rounded-lg bg-blue-100 text-blue-600 dark:bg-blue-900/30">
-                <span class="material-symbols-outlined">texture</span>
-              </div>
-              <div>
-                <p class="text-xs font-bold uppercase tracking-wider text-slate-500">Texture Diff</p>
-                <p class="text-xl font-bold">{{ currentResult.texture_score ? (100 - currentResult.texture_score).toFixed(1) : '--' }}%</p>
-              </div>
-            </div>
-          </div>
-
-          <div class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-            <div class="flex items-center gap-3">
-              <div class="flex size-10 items-center justify-center rounded-lg bg-purple-100 text-purple-600 dark:bg-purple-900/30">
-                <span class="material-symbols-outlined">view_in_ar</span>
-              </div>
-              <div>
-                <p class="text-xs font-bold uppercase tracking-wider text-slate-500">Portion Score</p>
-                <p class="text-xl font-bold">{{ currentResult.portion_score || '--' }}%</p>
-              </div>
-            </div>
-          </div>
-
-          <div class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-            <div class="flex items-center gap-3">
-              <div class="flex size-10 items-center justify-center rounded-lg bg-green-100 text-green-600 dark:bg-green-900/30">
-                <span class="material-symbols-outlined">thermostat</span>
-              </div>
-              <div>
-                <p class="text-xs font-bold uppercase tracking-wider text-slate-500">Surface Temp</p>
-                <p class="text-xl font-bold">{{ currentResult.environmental?.surface_temp || '--' }}°C</p>
+                <button v-if="hasMoreItems" class="flex w-full items-center justify-center gap-1 text-xs font-bold text-primary hover:text-primary/80" @click="loadMore" :disabled="isLoadingMore">
+                  <span v-if="isLoadingMore" class="h-4 w-4 animate-spin rounded-full border-b-2 border-primary" />
+                  <span v-else class="material-symbols-outlined">expand_more</span>
+                  {{ isLoadingMore ? 'Loading...' : 'Load More' }}
+                </button>
+                <p v-else-if="allCount > 0" class="text-center text-xs text-slate-400">{{ allCount }} results</p>
               </div>
             </div>
           </div>
@@ -452,469 +315,149 @@
       </main>
 
       <footer class="border-t border-slate-200 p-4 text-center dark:border-slate-800">
-        <p class="text-xs text-slate-400">
-          System Version 4.2.1-QC | Node 04 Connected | All systems nominal
-        </p>
+        <p class="text-xs text-slate-400">System Version 4.2.1-QC | AI Retrieval Mode</p>
       </footer>
     </div>
   </div>
 </template>
 
 <script setup>
-import { computed, nextTick, onMounted, onUnmounted, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import ApiService from '@/services/ApiService'
-import { useFoodQCWebSocket } from '@/composables/useFoodQCWebSocket'
 
 const apiService = new ApiService()
-const { connect, disconnect, on, off, requestHistory } = useFoodQCWebSocket()
 
-// WebSocket data
-const liveData = ref({
-  currentResult: null,
-  stats: {
-    items_checked_today: 0,
-    passed_today: 0,
-    failed_today: 0,
-    warning_today: 0,
-    pass_rate_today: 0,
-    current_session: {
-      items_checked: 0,
-      passed: 0,
-      failed: 0,
-      pass_rate: 0
-    }
-  },
-  thresholds: {
-    pass: 90,
-    optimal: 95
-  },
-})
+// ---------------------------------------------
+// Search State
+// ---------------------------------------------
+const uploadedImageUrl = ref(null)
+const uploadedImageFile = ref(null)
+const isSearching = ref(false)
+const searchError = ref(null)
+const searchResult = ref(null)
+const fileInputRef = ref(null)
 
+const openImagePicker = () => fileInputRef.value?.click()
+
+const handleImageSelected = (event) => {
+  const file = event.target.files[0]
+  if (!file) return
+  if (!file.type.startsWith('image/')) { searchError.value = 'Invalid image file.'; return }
+  if (file.size > 10 * 1024 * 1024) { searchError.value = 'File too large (max 10MB).'; return }
+  searchError.value = null
+  uploadedImageFile.value = file
+  const reader = new FileReader()
+  reader.onload = (e) => { uploadedImageUrl.value = e.target.result; searchResult.value = null }
+  reader.readAsDataURL(file)
+}
+
+const submitSearch = async () => {
+  if (!uploadedImageFile.value) { searchError.value = 'Select an image first.'; return }
+  isSearching.value = true
+  searchError.value = null
+  searchResult.value = null
+  try {
+    const formData = new FormData()
+    formData.append('image', uploadedImageFile.value)
+    formData.append('top_k', '10')
+    const response = await apiService.upload('/v1/food/search', formData)
+    searchResult.value = response
+  } catch (error) {
+    console.error('Search failed:', error)
+    searchError.value = error.message || 'Search failed.'
+  } finally {
+    isSearching.value = false
+  }
+}
+
+const resetSearch = () => {
+  uploadedImageUrl.value = null
+  uploadedImageFile.value = null
+  searchResult.value = null
+  searchError.value = null
+  if (fileInputRef.value) fileInputRef.value.value = ''
+}
+
+// ---------------------------------------------
+// Image URL Helper
+// ---------------------------------------------
+const getImageUrl = (imagePath) => {
+  if (!imagePath) return ''
+  // imagePath example: "images/My_quang.jpg"
+  // Serve from AI service static files
+  const baseUrl = import.meta.env.VITE_AI_SERVICE_URL || 'http://localhost:8000'
+  return `${baseUrl}/${imagePath}`
+}
+
+// ---------------------------------------------
+// Recent Inspections
+// ---------------------------------------------
 const activeFilter = ref('all')
-const isLoading = ref(false)
 const isLoadingMore = ref(false)
-const logContainerRef = ref(null)
-const isWsConnected = ref(false)
+const logContainerRef = ref(null) // reserved for future scroll control
 
-const createTabState = () => ({
-  items: [],         // All items
-  visibleCount: 10,  // Number of items currently visible
-  scrollTop: 0,
-  INITIAL_COUNT: 10,  // Initial load
-  LOAD_MORE_COUNT: 20, // Items to add on "Load More"
-})
+const createTabState = () => ({ items: [], visibleCount: 10, INITIAL_COUNT: 10, LOAD_MORE_COUNT: 20 })
+const tabStates = ref({ all: createTabState(), passed: createTabState(), failed: createTabState() })
 
-const tabStates = ref({
-  all: createTabState(),
-  passed: createTabState(),
-  failed: createTabState(),
-  warning: createTabState(),
-  pending: createTabState(),
-})
-
-// Computed counts - All = passed + failed + warning + pending
-const allCount = computed(() =>
-  passedCount.value + failedCount.value + warningCount.value + pendingCount.value
-)
+const allCount = computed(() => passedCount.value + failedCount.value)
 const passedCount = computed(() => tabStates.value.passed.items.length)
 const failedCount = computed(() => tabStates.value.failed.items.length)
-const warningCount = computed(() => tabStates.value.warning.items.length)
-const pendingCount = computed(() => tabStates.value.pending.items.length)
-
 const currentTabState = computed(() => tabStates.value[activeFilter.value] || createTabState())
+const qcResults = computed(() => currentTabState.value.items.slice(0, currentTabState.value.visibleCount))
+const hasMoreItems = computed(() => currentTabState.value.items.length > currentTabState.value.visibleCount)
 
-// Computed: return items based on visibleCount
-const qcResults = computed(() => {
-  const tab = currentTabState.value
-  if (!tab.items.length) return []
-
-  // Show items up to visibleCount
-  return tab.items.slice(0, tab.visibleCount)
-})
-
-// Check if there are more items to load
-const hasMoreItems = computed(() => {
-  const tab = currentTabState.value
-  return tab.items.length > tab.visibleCount
-})
-
-// ---------------------------------------------
-// Computed Properties for Real-time Display
-// ---------------------------------------------
-
-const currentResult = computed(() => liveData.value.currentResult || {})
-const stats = computed(() => liveData.value.stats || {})
-
-// Similarity score from current result or session average
-const displaySimilarityScore = computed(() => {
-  if (currentResult.value.similarity_score) {
-    return Math.round(currentResult.value.similarity_score * 100)
-  }
-  const session = stats.value.current_session
-  if (session && session.pass_rate) {
-    return Math.round(session.pass_rate * 100)
-  }
-  return 0
-})
-
-// Score trend (mock for now)
-const scoreTrend = computed(() => {
-  const session = stats.value.current_session
-  if (session && session.pass_rate) {
-    return Math.round((session.pass_rate - 0.95) * 100)
-  }
-  return 0
-})
-
-// Status badge class - >= 90% = pass (green), < 90% = fail (red)
-const statusBadgeClass = computed(() => {
-  const score = displaySimilarityScore.value
-
-  if (score >= 90) {
-    return 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-  } else {
-    return 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
-  }
-})
-
-// Status label - >= 90% = PASSED, < 90% = FAILED
-const statusLabel = computed(() => {
-  const score = displaySimilarityScore.value
-
-  if (score >= 90) {
-    return 'MATCH PASSED'
-  } else {
-    return 'FAILED'
-  }
-})
-
-// Score bar color - >= 90% = primary, < 90% = red
-const scoreStatusColor = computed(() => {
-  const score = displaySimilarityScore.value
-
-  if (score >= 90) {
-    return 'bg-primary'
-  } else {
-    return 'bg-red-500'
-  }
-})
-
-// Display confidence
-const displayConfidence = computed(() => {
-  if (currentResult.value.confidence) {
-    return currentResult.value.confidence.toFixed(3)
-  }
-  return 'N/A'
-})
-
-// Live timestamp
-const liveTimestamp = computed(() => {
-  if (currentResult.value.timestamp) {
-    return formatTime(currentResult.value.timestamp)
-  }
-  return '--:--:--:--'
-})
-
-
-// Fetch all data once and split by status
-const fetchTodayQCData = async () => {
-  isLoading.value = true
-
-  try {
-    // Get today's date
-    const startDate = new Date().toISOString().split('T')[0] // YYYY-MM-DD
-
-    // Call API with date filter - get only today's data
-    const response = await apiService.get('/v1/food/qc-results', {
-      start_date: startDate,
-      end_date: startDate,
-      page: 1,
-      page_size: 100
-    })
-
-    // Handle both API response formats: [...], { data: [...] }, { results: [...] }
-    const allData = Array.isArray(response)
-      ? response
-      : (response?.data ?? response?.results ?? [])
-
-    // Map status from backend to frontend - preserve warning/pending (do NOT map to passed/failed)
-    const mapStatus = (status) => {
-      if (status === 'pass') return 'passed'
-      if (status === 'fail') return 'failed'
-      return status // keep warning, pending, etc. as-is
+const populateInspections = (topK) => {
+  if (!topK?.length) return
+  const passed = [], failed = []
+  const now = new Date().toISOString()
+  topK.forEach((item, i) => {
+    const isPassed = item.score >= 0.85
+    const qcItem = {
+      id: item.id || `search-${Date.now()}-${i}`,
+      checked_at: now,
+      score_pct: Math.round((item.score || 0) * 100),
+      result_status: isPassed ? 'passed' : 'failed',
+      food_name: item.id || 'Unknown',
+      description: item.description || '',
+      ingredients: item.ingredients || [],
+      image_path: item.image_path || '',
     }
-
-    // Split data into tabs
-    const passedItems = []
-    const failedItems = []
-    const warningItems = []
-    const pendingItems = []
-
-    allData.forEach(item => {
-      const mappedStatus = mapStatus(item.result_status)
-      item.result_status = mappedStatus // Update to frontend format
-
-      if (mappedStatus === 'passed') {
-        passedItems.push(item)
-      } else if (mappedStatus === 'failed') {
-        failedItems.push(item)
-      } else if (mappedStatus === 'warning') {
-        warningItems.push(item)
-      } else if (mappedStatus === 'pending') {
-        pendingItems.push(item)
-      }
-    })
-
-    // Update tab states
-    tabStates.value.all.items = allData
-    tabStates.value.passed.items = passedItems
-    tabStates.value.failed.items = failedItems
-    tabStates.value.warning.items = warningItems
-    tabStates.value.pending.items = pendingItems
-
-    console.log(`Loaded today: ${allData.length} total, ${passedItems.length} passed, ${failedItems.length} failed`)
-  } catch (error) {
-    console.error('Error fetching QC results:', error)
-  } finally {
-    isLoading.value = false
-  }
+    isPassed ? passed.push(qcItem) : failed.push(qcItem)
+  })
+  tabStates.value.all.items = [...passed, ...failed, ...tabStates.value.all.items].slice(0, 100)
+  tabStates.value.passed.items = [...passed, ...tabStates.value.passed.items].slice(0, 100)
+  tabStates.value.failed.items = [...failed, ...tabStates.value.failed.items].slice(0, 100)
 }
 
-const waitForPaint = async () => {
-  await nextTick()
-  await new Promise((resolve) => requestAnimationFrame(() => resolve()))
-}
+watch(searchResult, (val) => { if (val?.top_k) populateInspections(val.top_k) })
 
-const saveScrollPosition = (tabKey = activeFilter.value) => {
-  const tab = tabStates.value[tabKey]
-  if (!tab || !logContainerRef.value) return 0
-
-  const top = logContainerRef.value.scrollTop || 0
-  tab.scrollTop = top
-  return top
-}
-
-const restoreScrollPosition = async (tabKey = activeFilter.value) => {
-  const tab = tabStates.value[tabKey]
-  if (!tab || !logContainerRef.value) return
-
-  await waitForPaint()
-  logContainerRef.value.scrollTop = tab.scrollTop || 0
-}
-
-// Load more items
 const loadMore = () => {
   const tab = currentTabState.value
   if (!tab) return
-
   isLoadingMore.value = true
-
-  // Simulate slight delay for better UX
-  setTimeout(() => {
-    tab.visibleCount += tab.LOAD_MORE_COUNT
-    isLoadingMore.value = false
-  }, 200)
+  setTimeout(() => { tab.visibleCount += tab.LOAD_MORE_COUNT; isLoadingMore.value = false }, 200)
 }
 
-// Back to top of list
-const backToTop = () => {
-  if (logContainerRef.value) {
-    logContainerRef.value.scrollTo({
-      top: 0,
-      behavior: 'smooth'
-    })
-  }
-}
-
-// Collapse list back to initial
-const collapseList = () => {
-  const tab = currentTabState.value
-  if (!tab) return
-
-  tab.visibleCount = tab.INITIAL_COUNT
-
-  // Scroll to top after collapse
-  nextTick(() => {
-    if (logContainerRef.value) {
-      logContainerRef.value.scrollTo({ top: 0, behavior: 'smooth' })
-    }
-  })
-}
-
-const handleFilterClick = async (filter) => {
-  // Save scroll position of current tab
-  const previousTab = activeFilter.value
-  saveScrollPosition(previousTab)
-
-  // Switch to new tab (data already loaded from fetchAllQCData)
-  activeFilter.value = filter
-
-  // Restore scroll position of new tab
-  await restoreScrollPosition(filter)
-}
-
-const formatTime = (timestamp) => {
-  if (!timestamp) return '--:--:--'
-
-  const date = new Date(timestamp)
-  return date.toLocaleTimeString('vi-VN', {
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-  })
-}
-
-const getBatchId = (id) => {
-  if (!id) return 'N/A'
-  return String(id).substring(0, 8).toUpperCase()
+const formatTime = (ts) => {
+  if (!ts) return '--:--:--'
+  return new Date(ts).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
 }
 
 // ---------------------------------------------
-// WebSocket Event Handlers
+// Best Match Computed
 // ---------------------------------------------
+const bestMatch = computed(() => searchResult.value?.top_k?.[0] ?? null)
+const displayMatchScore = computed(() => bestMatch.value ? Math.round((bestMatch.value.score || 0) * 100) : null)
 
-const handleQCResult = (data) => {
-  if (!data) return  // Guard against null WebSocket messages
-
-  liveData.value.currentResult = data
-
-  const statusMap = {
-    'pass': 'passed',
-    'passed': 'passed',
-    'fail': 'failed',
-    'failed': 'failed'
-    // warning, pending → kept as-is by default
-  }
-  const mappedStatus = statusMap[data.result_status] || data.result_status
-
-  // Create QC item matching the API response format
-  const qcItem = {
-    id: data.message_id || data.id || Date.now(),
-    checked_at: data.timestamp || new Date().toISOString(),
-    similarity_score: data.similarity_score || 0,
-    result_status: mappedStatus,
-    food_item: data.food_item,
-    batch_id: data.batch_id
-  }
-
-  // Update ALL tabs based on status
-  // 'all' tab - always add
-  if (tabStates.value.all) {
-    tabStates.value.all.items.unshift(qcItem)
-    if (tabStates.value.all.items.length > 100) {
-      tabStates.value.all.items.pop()
-    }
-  }
-
-  // 'passed' tab - add if passed
-  if (mappedStatus === 'passed') {
-    if (tabStates.value.passed) {
-      tabStates.value.passed.items.unshift(qcItem)
-      if (tabStates.value.passed.items.length > 100) {
-        tabStates.value.passed.items.pop()
-      }
-    }
-  }
-
-  // 'failed' tab - add if failed
-  if (mappedStatus === 'failed') {
-    if (tabStates.value.failed) {
-      tabStates.value.failed.items.unshift(qcItem)
-      if (tabStates.value.failed.items.length > 100) {
-        tabStates.value.failed.items.pop()
-      }
-    }
-  }
-
-  // 'warning' tab - add if warning
-  if (mappedStatus === 'warning') {
-    if (tabStates.value.warning) {
-      tabStates.value.warning.items.unshift(qcItem)
-      if (tabStates.value.warning.items.length > 100) {
-        tabStates.value.warning.items.pop()
-      }
-    }
-  }
-
-  // 'pending' tab - add if pending
-  if (mappedStatus === 'pending') {
-    if (tabStates.value.pending) {
-      tabStates.value.pending.items.unshift(qcItem)
-      if (tabStates.value.pending.items.length > 100) {
-        tabStates.value.pending.items.pop()
-      }
-    }
-  }
-}
-
-const handleQCStats = (data) => {
-  if (!data) return  // Guard against null WebSocket messages
-
-  if (data.stats) {
-    liveData.value.stats = data.stats
-  }
-
-  if (data.thresholds) {
-    liveData.value.thresholds = data.thresholds
-  }
-}
-
-const handleQCConnected = () => {
-  console.log('WebSocket connected')
-  isWsConnected.value = true
-
-  // Request initial history
-  requestHistory(20)
-}
-
-const handleQCDisconnected = () => {
-  console.log('WebSocket disconnected')
-  isWsConnected.value = false
-}
-
-// ---------------------------------------------
-// Initialize WebSocket
-// ---------------------------------------------
-
-const initWebSocket = () => {
-  // Register event handlers
-  on('food_qc_result', handleQCResult)
-  on('food_qc_stats', handleQCStats)
-  on('connected', handleQCConnected)
-  on('disconnected', handleQCDisconnected)
-
-  // Connect
-  connect()
-}
-
-const cleanupWebSocket = () => {
-  // Unregister event handlers
-  off('food_qc_result', handleQCResult)
-  off('food_qc_stats', handleQCStats)
-  off('connected', handleQCConnected)
-  off('disconnected', handleQCDisconnected)
-
-  // Disconnect
-  disconnect()
-}
-
-onMounted(async () => {
-  // 1. First: Fetch today's data from API
-  await fetchTodayQCData()
-
-  // 2. Then: Connect WebSocket for real-time updates
-  initWebSocket()
-})
-
-onUnmounted(() => {
-  cleanupWebSocket()
-})
+const matchStatusLabel = computed(() => bestMatch.value && bestMatch.value.score >= 0.85 ? 'PASSED' : 'FAILED')
+const matchStatusBadgeClass = computed(() =>
+  bestMatch.value && bestMatch.value.score >= 0.85
+    ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+    : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+)
+const matchScoreBarColor = computed(() => bestMatch.value && bestMatch.value.score >= 0.85 ? 'bg-primary' : 'bg-red-500')
 </script>
 
 <style scoped>
-.qc-scroll-area {
-  height: 332px;
-  max-height: 332px;
-  min-height: 332px;
-}
+.qc-scroll-area { height: 520px; max-height: 520px; min-height: 520px; }
 </style>

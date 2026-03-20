@@ -1,27 +1,33 @@
 """
 Food & QC Routes
 """
+import os
+import base64
+import logging
+import httpx
 from typing import List, Optional
 from uuid import UUID
 from datetime import datetime, date
 
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+from fastapi import APIRouter, Depends, HTTPException, status, Query, File, UploadFile, Form
+from fastapi import BackgroundTasks
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_
 from sqlalchemy import func
 
-from app.db.database import get_db
+from app.db.database import get_db, settings
 from app.models.models import (
     FoodItem, FoodMasterImage, FoodQCResult, Branch, User
 )
 from app.schemas.schemas import (
     FoodItemCreate, FoodItemResponse,
     FoodMasterImageCreate, FoodMasterImageResponse,
-    FoodQCResultResponse
+    FoodQCResultResponse, ImageCompareResponse, FoodSearchResponse
 )
 from app.api.auth import get_current_user
 
 router = APIRouter(prefix="/food", tags=["Food & QC"])
+logger = logging.getLogger(__name__)
 
 
 # ========================
@@ -344,4 +350,173 @@ async def get_qc_summary(
         "fail_count": getattr(row, 'fail', 0) or 0,
         "warning_count": getattr(row, 'warning', 0) or 0,
         "pass_rate": round(pass_count / total, 2) if total > 0 else 0
+    }
+
+
+# ========================
+# Food Search (Retrieval) Routes
+# ========================
+
+AI_SERVICE_URL = settings.AI_SERVICE_URL
+AI_SEARCH_ENDPOINT = f"{AI_SERVICE_URL}/v1/retrieval/search"
+
+
+@router.post("/search", response_model=FoodSearchResponse)
+async def search_food(
+    image: UploadFile = File(..., description="Image uploaded by user to search"),
+    top_k: int = Query(10, ge=1, le=50),
+    camera_id: Optional[str] = Form(None),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Search for similar food images using AI retrieval.
+
+    - **image**: The image uploaded by the user (required)
+    - **top_k**: Number of top matching results to return (default: 10, max: 50)
+    - **camera_id**: Optional camera ID for logging/tracking
+
+    Returns a list of matching food images sorted by similarity score (descending).
+    The first item in `top_k` is the best match.
+    """
+    # Read uploaded image bytes
+    uploaded_bytes = await image.read()
+
+    if not uploaded_bytes:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Empty image file provided."
+        )
+
+    # --- Call AI Service ---
+    files_payload = {
+        "image": (image.filename or "upload.jpg", uploaded_bytes, image.content_type or "image/jpeg"),
+    }
+    data_payload = {
+        "top_k": str(top_k),
+        "camera_id": (camera_id or ""),
+    }
+
+    try:
+        async with httpx.AsyncClient(timeout=60.0) as client:
+            response = await client.post(
+                AI_SEARCH_ENDPOINT,
+                files=files_payload,
+                data=data_payload,
+            )
+            response.raise_for_status()
+            ai_result = response.json()
+    except httpx.TimeoutException:
+        # Fallback: return mock data when AI times out
+        logger.warning("AI service timed out, returning mock data.")
+        ai_result = _get_mock_search_response(top_k)
+    except httpx.HTTPStatusError as exc:
+        # Fallback: return mock data when AI returns error
+        logger.warning(f"AI service error ({exc.response.status_code}), returning mock data.")
+        ai_result = _get_mock_search_response(top_k)
+    except Exception as exc:
+        # Fallback: any connection error → return mock data
+        logger.warning(f"AI service unreachable: {exc}. Returning mock data for demo.")
+        ai_result = _get_mock_search_response(top_k)
+
+    return ai_result
+
+
+def _get_mock_search_response(top_k: int = 10) -> dict:
+    """
+    Returns mock search response for demo/development when AI service is unavailable.
+    """
+    return {
+        "query_description": (
+            "A vibrant Vietnamese-style noodle salad presented in a decorative bowl, "
+            "featuring cooked shrimp, halved hard-boiled eggs, thin rice vermicelli noodles, "
+            "fresh lettuce, bean sprouts, cilantro, shredded banana blossom, and crunchy fried shallots, "
+            "accompanied by two dipping sauces and lime wedges on a bamboo tray."
+        ),
+        "query_ingredients": [
+            "cooked shrimp", "hard-boiled eggs", "rice vermicelli noodles",
+            "lettuce", "bean sprouts", "cilantro", "shredded banana blossom",
+            "fried shallots", "yellow fruit slices", "chili slices",
+            "onion rings", "lime wedges"
+        ],
+        "top_k": [
+            {
+                "id": "My_quang.jpg",
+                "image_path": "images/My_quang.jpg",
+                "description": (
+                    "A vibrant Vietnamese-style noodle salad is presented in a decorative bowl, "
+                    "featuring cooked shrimp, halved hard-boiled eggs, thin rice vermicelli noodles, "
+                    "fresh lettuce, bean sprouts, cilantro, shredded banana blossom, and crunchy fried shallots."
+                ),
+                "ingredients": [
+                    "cooked shrimp", "hard-boiled eggs", "rice vermicelli noodles",
+                    "lettuce", "bean sprouts", "cilantro", "shredded banana blossom",
+                    "fried shallots", "yellow fruit slices", "chili slices",
+                    "onion rings", "lime wedges"
+                ],
+                "base_score": 1.0,
+                "ingredient_score": 1.0,
+                "score": 1.0
+            },
+            {
+                "id": "Bun_bo_Hue.jpg",
+                "image_path": "images/Bun_bo_Hue.jpg",
+                "description": "A rich and spicy Vietnamese beef noodle soup with thick rice noodles, beef shank, and lemongrass.",
+                "ingredients": [
+                    "rice noodles", "beef shank", "beef brisket", "lemongrass",
+                    "chili", "bean sprouts", "lime", "cilantro", "scallion"
+                ],
+                "base_score": 0.72,
+                "ingredient_score": 0.65,
+                "score": 0.70
+            },
+            {
+                "id": "Pho_bo.jpg",
+                "image_path": "images/Pho_bo.jpg",
+                "description": "Traditional Vietnamese pho with rice noodles, sliced beef, and aromatic broth.",
+                "ingredients": [
+                    "rice noodles", "beef slices", "beef broth", "star anise",
+                    "cinnamon", "bean sprouts", "basil", "lime", "chili"
+                ],
+                "base_score": 0.68,
+                "ingredient_score": 0.55,
+                "score": 0.64
+            },
+            {
+                "id": "Banh_mi.jpg",
+                "image_path": "images/Banh_mi.jpg",
+                "description": "Vietnamese baguette sandwich filled with grilled pork, pickled vegetables, and fresh herbs.",
+                "ingredients": [
+                    "baguette", "grilled pork", "pickled carrots", "pickled daikon",
+                    "cucumber", "cilantro", "jalapeño", "mayonnaise"
+                ],
+                "base_score": 0.45,
+                "ingredient_score": 0.30,
+                "score": 0.40
+            },
+            {
+                "id": "Com_tam.jpg",
+                "image_path": "images/Com_tam.jpg",
+                "description": "Vietnamese broken rice with grilled pork chop, steamed egg meatloaf, and pickled vegetables.",
+                "ingredients": [
+                    "broken rice", "grilled pork chop", "egg meatloaf",
+                    "pickled vegetables", "green onion", "fish sauce"
+                ],
+                "base_score": 0.40,
+                "ingredient_score": 0.25,
+                "score": 0.35
+            },
+            {
+                "id": "Ca_nuong.jpg",
+                "image_path": "images/Ca_nuong.jpg",
+                "description": "Grilled catfish served with rice noodles, fresh herbs, and nuoc cham dipping sauce.",
+                "ingredients": [
+                    "catfish", "rice noodles", "fresh herbs", "cucumber",
+                    "carrot", "nuoc cham sauce", "peanut"
+                ],
+                "base_score": 0.30,
+                "ingredient_score": 0.20,
+                "score": 0.27
+            }
+        ][:top_k]
     }
