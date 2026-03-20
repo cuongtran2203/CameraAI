@@ -121,7 +121,7 @@ npm run dev
 ### Seed Users & Initial Data
 
 ```bash
-cd /Users/ngohongnguyen/Documents/works/CameraAI/app/backend
+cd /home/cuongtdm/Documents/tructt/service/CameraAI/app/backend
 
 # Chạy seed script để tạo:
 # - Tài khoản mặc định

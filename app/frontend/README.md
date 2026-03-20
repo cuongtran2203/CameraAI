@@ -7,7 +7,7 @@
 ### 1. Cài đặt dependencies
 
 ```bash
-cd /Users/ngohongnguyen/Documents/works/CameraAI/app/frontend
+cd /home/cuongtdm/Documents/tructt/service/CameraAI/app/frontend
 npm install
 ```
 
