@@ -54,10 +54,10 @@ else:
 # Async engine (for FastAPI)
 engine = create_async_engine(
     db_url,
-    echo=False,
+    echo=True,
     pool_pre_ping=True,
-    pool_size=10 if not is_sqlite else 5,
-    max_overflow=20 if not is_sqlite else 5
+    # pool_size=10 if not is_sqlite else 5,
+    # max_overflow=20 if not is_sqlite else 5
 )
 
 # Sync engine (for migrations)

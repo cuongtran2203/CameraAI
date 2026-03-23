@@ -83,14 +83,14 @@
                 <div class="relative aspect-video w-full overflow-hidden rounded-lg border border-slate-200 bg-slate-100 dark:border-slate-700 dark:bg-slate-800">
                   <img
                     v-if="bestMatch"
-                    :src="getImageUrl(bestMatch.image_path)"
+                    :key="bestMatchImageUrl"
+                    :src="bestMatchImageUrl"
                     :alt="bestMatch.id"
                     class="absolute inset-0 h-full w-full object-contain"
                     @error="(e) => e.target.style.display = 'none'"
                   />
                   <div class="absolute inset-0 flex flex-col items-center justify-center gap-2">
                     <span class="material-symbols-outlined text-5xl text-slate-300">restaurant</span>
-                    <p class="text-xs text-slate-400">{{ bestMatch ? bestMatch.id : 'Upload to search' }}</p>
                   </div>
                 </div>
 
@@ -155,6 +155,9 @@
                 <div v-if="searchError" class="mt-2 flex items-center gap-2 rounded-lg bg-red-50 px-3 py-2 text-xs text-red-600 dark:bg-red-900/20">
                   <span class="material-symbols-outlined text-sm">error</span>{{ searchError }}
                 </div>
+                <div v-else-if="noMatchFound" class="mt-2 flex items-center gap-2 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-700 dark:bg-amber-900/20 dark:text-amber-300">
+                  <span class="material-symbols-outlined text-sm">info</span>Không có món ăn nào phù hợp.
+                </div>
               </div>
             </div>
 
@@ -191,7 +194,7 @@
                   <span class="text-xs font-medium uppercase tracking-widest text-slate-500">Best Match Score</span>
                   <div class="flex items-baseline gap-3">
                     <h2 class="text-5xl font-black text-slate-300 dark:text-slate-600">--%</h2>
-                    <span class="text-sm text-slate-400">Upload image to search</span>
+                    <span class="text-sm text-slate-400">{{ noMatchFound ? 'Không có món ăn phù hợp' : 'Upload image to search' }}</span>
                   </div>
                 </div>
                 <div class="max-w-md flex-1 px-10">
@@ -268,11 +271,11 @@
                 <div class="flex flex-col">
                   <div v-if="qcResults.length === 0" class="flex flex-col items-center justify-center py-12 text-slate-400">
                     <span class="material-symbols-outlined text-4xl">search_off</span>
-                    <p class="mt-2 text-sm">No results yet</p>
-                    <p class="text-xs">Upload an image to search</p>
+                    <p class="mt-2 text-sm">{{ noMatchFound ? 'Không có món ăn nào phù hợp' : 'No results yet' }}</p>
+                    <p class="text-xs">{{ noMatchFound ? 'Hãy thử ảnh khác hoặc kiểm tra lại dữ liệu tham chiếu' : 'Upload an image to search' }}</p>
                   </div>
 
-                  <div v-for="item in qcResults" :key="item.id"
+                  <div v-for="item in qcResults" :key="item.inspection_id"
                     class="flex items-center gap-3 border-b border-slate-100 px-4 py-3 transition-colors hover:bg-slate-50 dark:border-slate-800 dark:hover:bg-slate-800/50"
                     :class="item.result_status === 'failed' ? 'border-l-2 border-l-red-400' : 'border-l-2 border-l-green-400'">
                     <!-- Food thumbnail -->
@@ -335,6 +338,7 @@ const uploadedImageFile = ref(null)
 const isSearching = ref(false)
 const searchError = ref(null)
 const searchResult = ref(null)
+const noMatchFound = ref(false)
 const fileInputRef = ref(null)
 
 const openImagePicker = () => fileInputRef.value?.click()
@@ -356,15 +360,19 @@ const submitSearch = async () => {
   isSearching.value = true
   searchError.value = null
   searchResult.value = null
+  noMatchFound.value = false
   try {
     const formData = new FormData()
     formData.append('image', uploadedImageFile.value)
     formData.append('top_k', '10')
     const response = await apiService.upload('/v1/food/search', formData)
     searchResult.value = response
+    noMatchFound.value = !response?.top_k?.length
   } catch (error) {
     console.error('Search failed:', error)
+    searchResult.value = null
     searchError.value = error.message || 'Search failed.'
+    noMatchFound.value = false
   } finally {
     isSearching.value = false
   }
@@ -375,6 +383,7 @@ const resetSearch = () => {
   uploadedImageFile.value = null
   searchResult.value = null
   searchError.value = null
+  noMatchFound.value = false
   if (fileInputRef.value) fileInputRef.value.value = ''
 }
 
@@ -413,7 +422,8 @@ const populateInspections = (topK) => {
   topK.forEach((item, i) => {
     const isPassed = item.score >= 0.85
     const qcItem = {
-      id: item.id || `search-${Date.now()}-${i}`,
+      inspection_id: `search-${now}-${i}-${Math.random().toString(36).slice(2, 8)}`,
+      id: item.id || `search-item-${i}`,
       checked_at: now,
       score_pct: Math.round((item.score || 0) * 100),
       result_status: isPassed ? 'passed' : 'failed',
@@ -429,7 +439,11 @@ const populateInspections = (topK) => {
   tabStates.value.failed.items = [...failed, ...tabStates.value.failed.items].slice(0, 100)
 }
 
-watch(searchResult, (val) => { if (val?.top_k) populateInspections(val.top_k) })
+watch(searchResult, (val) => {
+  if (!val) return
+  noMatchFound.value = !val?.top_k?.length
+  if (val.top_k?.length) populateInspections(val.top_k)
+})
 
 const loadMore = () => {
   const tab = currentTabState.value
@@ -447,6 +461,7 @@ const formatTime = (ts) => {
 // Best Match Computed
 // ---------------------------------------------
 const bestMatch = computed(() => searchResult.value?.top_k?.[0] ?? null)
+const bestMatchImageUrl = computed(() => bestMatch.value ? getImageUrl(bestMatch.value.image_path) : '')
 const displayMatchScore = computed(() => bestMatch.value ? Math.round((bestMatch.value.score || 0) * 100) : null)
 
 const matchStatusLabel = computed(() => bestMatch.value && bestMatch.value.score >= 0.85 ? 'PASSED' : 'FAILED')

@@ -77,7 +77,6 @@ class FoodRetrievalEngine:
         image,
         top_k: int = DEFAULT_TOP_K,
         top_n_rerank: int = TOP_N_RERANK,
-        camera_id: str = None,
     ) -> Dict[str, Any]:
         vlm_result = call_vlm_vision(image)
         query_description = vlm_result["dense_caption"]
@@ -127,20 +126,11 @@ class FoodRetrievalEngine:
             )
 
         candidates.sort(key=lambda x: x["score"], reverse=True)
-        top_results = candidates[:top_k]
 
-        if camera_id:
-            from services.kafka_publisher import publisher
-            # Publisher the best match
-            if top_results:
-                best = top_results[0]
-                publisher.publish_food_detection(
-                    camera_id=camera_id,
-                    food_item=best.get("description", best.get("id", "Unknown")),
-                    result_status="pass" if best["score"] >= 0.85 else "warning",
-                    similarity_score=best["score"],
-                    details={"food_item_id": str(best.get("id"))}
-                )
+        # Only return the single best match if it meets the 0.75 threshold
+        top_results = []
+        if candidates and candidates[0]["score"] >= 0.75:
+            top_results = [candidates[0]]
 
         return {
             "query_description": query_description,

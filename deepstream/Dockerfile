@@ -1,10 +1,14 @@
-# Base image: NVIDIA DeepStream 6.3 for dGPU (change to 'triton' or 'jetson' if needed)
-# For Jetson, use: nvcr.io/nvidia/deepstream-l4t:6.3-samples
-FROM nvcr.io/nvidia/deepstream:8.0-gc-triton-devel
+# Base image: NVIDIA DeepStream with CUDA 12.2 for dGPU
+# Use DS 7.0 which ships with CUDA 12.2
+FROM nvcr.io/nvidia/deepstream:7.0-gc-triton-devel
 
 # Set environment variables
 ENV DEBIAN_FRONTEND=noninteractive
 ENV PYTHONUNBUFFERED=1
+# Force CUDA 12.2 runtime
+ENV CUDA_HOME=/usr/local/cuda-12.2
+ENV PATH=${CUDA_HOME}/bin:${PATH}
+ENV LD_LIBRARY_PATH=${CUDA_HOME}/lib64:${LD_LIBRARY_PATH}
 
 # Install system dependencies and Python tools
 RUN apt-get update && apt-get install -y \
@@ -20,20 +24,24 @@ RUN apt-get update && apt-get install -y \
     libcairo2-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# Install pyds (DeepStream Python Bindings)
-# Note: In DeepStream 6.3+, pyds is often available via pip or pre-installed scripts.
-# We will download and install the bindings from the official repo compatible with DS 6.3.
-WORKDIR /opt/nvidia/deepstream/deepstream
-RUN apt-get update && apt-get install -y git cmake && \
+# Install pyds (DeepStream Python Bindings) compatible with DS 7.0 / CUDA 12.2
+# Try pip first (works for DS 6.4+)
+RUN pip3 install --no-cache-dir pyds || true
+
+# If pyds not available via pip, build from source (DS 7.0 compatible)
+RUN if ! python3 -c "import pyds" 2>/dev/null; then \
+    apt-get update && apt-get install -y git cmake && \
+    cd /opt/nvidia/deepstream/deepstream && \
     git clone https://github.com/NVIDIA-AI-IOT/deepstream_python_apps.git && \
     cd deepstream_python_apps && \
-    git checkout v1.1.8 && \
+    git checkout v1.1.10 && \
     cd bindings && \
-    mkdir build && \
+    mkdir -p build && \
     cd build && \
-    cmake .. && \
+    cmake -DCMAKE_BUILD_TYPE=Release .. && \
     make -j$(nproc) && \
-    pip3 install pyds-*.whl
+    pip3 install pyds-*.whl || true; \
+    fi
 
 # Create app directory
 WORKDIR /app
@@ -41,7 +49,6 @@ WORKDIR /app
 # Copy application code
 COPY configs/ ./configs/
 COPY src/ ./src/
-COPY scripts/ ./scripts/
 
 # Expose RTSP port
 EXPOSE 8554

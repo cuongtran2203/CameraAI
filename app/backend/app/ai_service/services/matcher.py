@@ -9,7 +9,7 @@ from services.vision import (
 )
 
 
-async def compare_food_images(image_a: UploadFile, image_b: UploadFile, camera_id: str = None, food_item: str = "Unknown") -> CompareResponse:
+async def compare_food_images(image_a: UploadFile, image_b: UploadFile) -> CompareResponse:
     bytes_a = await image_a.read()
     bytes_b = await image_b.read()
 
@@ -23,16 +23,6 @@ async def compare_food_images(image_a: UploadFile, image_b: UploadFile, camera_i
     ing_score = ingredient_similarity(result_a["ingredients"], result_b["ingredients"])
 
     final_score = (W_BASE * base_score) + (W_INGREDIENT * ing_score)
-
-    if camera_id:
-        from services.kafka_publisher import publisher
-        publisher.publish_food_detection(
-            camera_id=camera_id,
-            food_item=food_item,
-            result_status="pass" if final_score >= 0.75 else "fail",
-            similarity_score=float(final_score),
-            details={}
-        )
 
     return CompareResponse(
         score=round(float(final_score), 4),

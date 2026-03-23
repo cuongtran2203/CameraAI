@@ -113,10 +113,11 @@ class FoodRetrievalEngine:
                 W_INGREDIENT * ingredient_score
             )
 
+            base_dir = os.getenv("IMAGE_BASE_PATH", "/home/cuongtdm/Documents/tructt/service/CameraAI/app/backend/app/ai_service").rstrip("/")
             candidates.append(
                 {
                     "id": item["id"],
-                    "image_path": item["image_path"],
+                    "image_path": f"{base_dir}/{item['image_path']}",
                     "description": item.get("description", ""),
                     "ingredients": item.get("ingredients", []),
                     "base_score": round(float(base_score), 4),
@@ -127,10 +128,15 @@ class FoodRetrievalEngine:
 
         candidates.sort(key=lambda x: x["score"], reverse=True)
 
+        # Only return the single best match if it meets the 0.75 threshold
+        top_results = []
+        if candidates and candidates[0]["score"] >= 0.75:
+            top_results = [candidates[0]]
+
         return {
             "query_description": query_description,
             "query_ingredients": query_ingredients,
-            "top_k": candidates[:top_k],
+            "top_k": top_results[0],
         }
 
 

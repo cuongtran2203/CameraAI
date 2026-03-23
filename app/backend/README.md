@@ -80,6 +80,10 @@ cd /Users/ngohongnguyen/Documents/works/CameraAI/app/backend
 /Applications/Docker.app/Contents/Resources/bin/docker compose ps
 ```
 
+```bash
+python3 mock_camera_client.py /Users/ngohongnguyen/Documents/works/CameraAI/app/backend/sample_food.jpg 14
+```
+
 **Kết quả mong đợi:**
 
 | Service | Status | Port |
@@ -93,7 +97,7 @@ cd /Users/ngohongnguyen/Documents/works/CameraAI/app/backend
 ### Bước 2: Chạy Backend
 
 ```bash
-cd /Users/ngohongnguyen/Documents/works/CameraAI/app/backend
+cd /home/cuongtdm/Documents/tructt/service/CameraAI/app/backend
 
 # Chạy với hot reload
 python3 -m uvicorn app.main:app --host 0.0.0.0 --port 8080 --reload

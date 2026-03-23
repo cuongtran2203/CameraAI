@@ -382,6 +382,31 @@ async def handle_food_detection(message: Dict):
         logger.error(traceback.format_exc())
 
 
+async def handle_human_detection(message: Dict):
+    """
+    Handle human/customer detection message from DeepStream
+    1. Parse detection events from Kafka message
+    2. Log the detection (extend to save to DB / broadcast via WebSocket as needed)
+    """
+    try:
+        camera_id = message.get('camera_id')
+        humans = message.get('humans', [])
+        timestamp = message.get('timestamp')
+
+        logger.info(
+            f"Human detection: camera={camera_id}, "
+            f"count={len(humans)}, time={timestamp}"
+        )
+
+        # TODO: Save to database, update customer_event records,
+        #       update hourly/daily stats, broadcast via WebSocket, etc.
+
+    except Exception as e:
+        import traceback
+        logger.error(f"Error handling human detection: {e}")
+        logger.error(traceback.format_exc())
+
+
 async def handle_customer_detection(message: Dict):
     """Handle customer detection message from AI"""
     # TODO: Save to database

@@ -29,6 +29,7 @@ from app.services.kafka_service import (
     handle_action_detection,
     handle_food_detection,
     handle_customer_detection,
+    handle_human_detection,
     KafkaTopics
 )
 
@@ -81,6 +82,7 @@ async def start_kafka_consumer():
         KafkaTopics.AI_ACTION_DETECTIONS: handle_action_detection,
         KafkaTopics.AI_FOOD_DETECTIONS: handle_food_detection,
         KafkaTopics.AI_CUSTOMER_DETECTIONS: handle_customer_detection,
+        KafkaTopics.AI_CUSTOMER_DETECTIONS: handle_human_detection,
     }
 
     # Start consuming in background
