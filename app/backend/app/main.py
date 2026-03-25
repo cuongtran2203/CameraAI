@@ -5,6 +5,11 @@ FastAPI Backend
 import logging
 import asyncio
 from contextlib import asynccontextmanager
+
+# Load .env file automatically on startup
+from dotenv import load_dotenv
+load_dotenv()
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -24,6 +29,7 @@ from app.services.kafka_service import (
     handle_action_detection,
     handle_food_detection,
     handle_customer_detection,
+    handle_human_detection,
     KafkaTopics
 )
 
@@ -76,6 +82,7 @@ async def start_kafka_consumer():
         KafkaTopics.AI_ACTION_DETECTIONS: handle_action_detection,
         KafkaTopics.AI_FOOD_DETECTIONS: handle_food_detection,
         KafkaTopics.AI_CUSTOMER_DETECTIONS: handle_customer_detection,
+        KafkaTopics.AI_CUSTOMER_DETECTIONS: handle_human_detection,
     }
 
     # Start consuming in background
@@ -114,6 +121,9 @@ async def lifespan(app: FastAPI):
 
     # Start AI stream simulation (60 seconds for testing, use 900 for 15 minutes in production)
     asyncio.create_task(simulate_ai_stream_updates(interval_seconds=60))  # 1 minute for testing
+
+    # Start Food QC simulation (disabled — now handled via /food/search endpoint)
+    # asyncio.create_task(simulate_food_qc_updates(interval_seconds=3))
 
     logger.info("Camera Analyst API started successfully!")
 

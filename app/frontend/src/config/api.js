@@ -18,3 +18,9 @@ export const WS_BASE_URL = isDev ? '' : (env.VITE_API_URL?.replace(/\/api$/, '')
 
 // Stream base URL (for video streaming)
 export const STREAM_BASE_URL = isDev ? 'http://localhost:8080' : (env.VITE_API_URL?.replace('/api', '') || 'http://localhost:8080')
+
+// MediaMTX URL (RTSP → HLS proxy)
+export const MEDIAMTX_URL = isDev ? 'http://localhost:8888' : (env.VITE_MEDIAMTX_URL || 'http://localhost:8888')
+
+// MediaMTX RTSP port
+export const MEDIAMTX_RTSP_PORT = 8554

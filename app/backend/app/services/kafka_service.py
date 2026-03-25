@@ -10,7 +10,6 @@ from typing import Optional, Callable, Dict, Any
 from uuid import uuid4
 
 from kafka import KafkaProducer, KafkaConsumer
-from kafka.errors import KafkaError
 
 from app.db.database import settings
 
@@ -254,11 +253,158 @@ async def handle_action_detection(message: Dict):
 
 
 async def handle_food_detection(message: Dict):
-    """Handle food detection message from AI"""
-    # TODO: Save to database
-    # - Parse food detections
-    # - Create food_qc_result records
-    logger.info(f"Food detection: {message.get('camera_id')}")
+    """
+    Handle food detection message from AI
+    1. Parse food detections from Kafka message
+    2. Save to food_qc_results table in database
+    3. Broadcast via WebSocket for real-time frontend updates
+    """
+    try:
+        from sqlalchemy.ext.asyncio import create_async_engine
+        from sqlalchemy.orm import sessionmaker
+        from sqlalchemy import text
+        from app.db.database import settings
+        from app.models.models import FoodQCResult, FoodItem
+        from app.services.food_qc_service import food_qc_manager
+        from datetime import datetime
+
+        # Get detections from message
+        detections = message.get('detections', [])
+        timestamp = message.get('timestamp', datetime.utcnow().isoformat())
+        camera_id = message.get('camera_id')
+
+        if not detections:
+            logger.warning("No detections in food QC message")
+            return
+
+        # Create async engine for this async operation
+        engine = create_async_engine(settings.DATABASE_URL, echo=False)
+        AsyncSessionLocal = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
+
+        async with AsyncSessionLocal() as session:
+            for detection in detections:
+                # Get food_item_id - try to find by name or use provided ID
+                food_item_id = detection.get('food_item_id')
+                food_item_name = detection.get('food_item', 'Unknown')
+
+                # If no food_item_id, try to find food item by name
+                if not food_item_id and food_item_name:
+                    result = await session.execute(
+                        text("SELECT id FROM food_items WHERE name ILIKE :name LIMIT 1"),
+                        {"name": f"%{food_item_name}%"}
+                    )
+                    food_item = result.fetchone()
+                    if food_item:
+                        food_item_id = food_item[0]
+
+                # Use first food item if still not found (for demo)
+                if not food_item_id:
+                    result = await session.execute(text("SELECT id FROM food_items LIMIT 1"))
+                    food_item = result.fetchone()
+                    if food_item:
+                        food_item_id = food_item[0]
+                    else:
+                        logger.warning("No food items found in database, skipping")
+                        continue
+
+                # Parse result status
+                result_status = detection.get('result_status', 'pass')
+                # Normalize status
+                if result_status in ['passed', 'pass']:
+                    result_status = 'pass'
+                elif result_status in ['failed', 'fail']:
+                    result_status = 'fail'
+                elif result_status == 'warning':
+                    result_status = 'warning'
+
+                # Parse similarity score
+                similarity_score = detection.get('similarity_score', 0)
+                if isinstance(similarity_score, str):
+                    # If it's a percentage string like "85%", convert to decimal
+                    similarity_score = float(similarity_score.replace('%', '')) / 100
+                elif similarity_score > 1:
+                    # If it's already a percentage (e.g., 85), convert to decimal
+                    similarity_score = similarity_score / 100
+
+                # Parse timestamp
+                if isinstance(timestamp, str):
+                    checked_at = datetime.fromisoformat(timestamp.replace('Z', '+00:00'))
+                else:
+                    checked_at = datetime.utcnow()
+
+                # Create QC result record
+                qc_result = FoodQCResult(
+                    id=str(uuid4()),
+                    camera_id=camera_id,
+                    food_item_id=food_item_id,
+                    result_status=result_status,
+                    similarity_score=similarity_score,
+                    color_match=detection.get('color_match'),
+                    portion_match=detection.get('portion_match'),
+                    topping_present=detection.get('topping_present'),
+                    proof_image_url=detection.get('proof_image_url'),
+                    staff_id=detection.get('staff_id'),
+                    checked_by='ai',
+                    checked_at=checked_at,
+                    created_at=datetime.utcnow()
+                )
+
+                session.add(qc_result)
+
+                # Prepare WebSocket broadcast data
+                ws_data = {
+                    'message_id': detection.get('message_id', str(uuid4())),
+                    'timestamp': checked_at.isoformat(),
+                    'camera_id': camera_id,
+                    'food_item': food_item_name,
+                    'food_item_id': food_item_id,
+                    'result_status': result_status,
+                    'similarity_score': similarity_score,
+                    'confidence': detection.get('confidence', 0.95),
+                    'color_match': detection.get('color_match'),
+                    'portion_match': detection.get('portion_match'),
+                    'topping_present': detection.get('topping_present'),
+                    'proof_image_url': detection.get('proof_image_url'),
+                }
+
+                # Commit this record
+                await session.commit()
+
+                # Broadcast via WebSocket
+                await food_qc_manager.broadcast_qc_result(ws_data)
+                logger.info(f"Food QC saved and broadcasted: {food_item_name} - {result_status}")
+
+        await engine.dispose()
+
+    except Exception as e:
+        import traceback
+        logger.error(f"Error handling food detection: {e}")
+        logger.error(traceback.format_exc())
+
+
+async def handle_human_detection(message: Dict):
+    """
+    Handle human/customer detection message from DeepStream
+    1. Parse detection events from Kafka message
+    2. Log the detection (extend to save to DB / broadcast via WebSocket as needed)
+    """
+    try:
+        camera_id = message.get('camera_id')
+        humans = message.get('humans', [])
+        timestamp = message.get('timestamp')
+
+        logger.info(
+            f"Human detection: camera={camera_id}, "
+            f"count={len(humans)}, time={timestamp}"
+        )
+
+        # TODO: Save to database, update customer_event records,
+        #       update hourly/daily stats, broadcast via WebSocket, etc.
+
+    except Exception as e:
+        import traceback
+        logger.error(f"Error handling human detection: {e}")
+        logger.error(traceback.format_exc())
 
 
 async def handle_customer_detection(message: Dict):

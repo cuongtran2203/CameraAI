@@ -593,6 +593,52 @@ class DailyReportResponse(BaseSchema):
 
 
 # =====================================================
+# IMAGE COMPARE SCHEMAS
+# =====================================================
+
+class ImageAnalysisSchema(BaseSchema):
+    """Image analysis result from AI"""
+    dense_caption: str
+    ingredients: List[str] = []
+
+
+class ImageCompareResponse(BaseSchema):
+    """Image compare response from AI service"""
+    score: float = Field(description="Final similarity score (0.0 - 1.0)")
+    base_score: float = Field(description="Visual similarity score from embedding")
+    ingredient_score: float = Field(description="Ingredient similarity score")
+    is_match: bool = Field(description="True if score >= threshold (0.75)")
+    image_a: ImageAnalysisSchema
+    image_b: ImageAnalysisSchema
+    status: Optional[str] = Field(
+        default=None,
+        description="'pass' if is_match, else 'fail'"
+    )
+
+
+# =====================================================
+# FOOD SEARCH (RETRIEVAL) SCHEMAS
+# =====================================================
+
+class FoodSearchItem(BaseSchema):
+    """A single search result item from AI retrieval"""
+    id: str = Field(description="Image ID in database")
+    image_path: str = Field(description="Path to matched image")
+    description: str = Field(description="AI description of the matched food")
+    ingredients: List[str] = Field(default_factory=list)
+    base_score: float = Field(description="Visual embedding similarity (0.0 - 1.0)")
+    ingredient_score: float = Field(description="Ingredient similarity (0.0 - 1.0)")
+    score: float = Field(description="Final combined score (0.0 - 1.0)")
+
+
+class FoodSearchResponse(BaseSchema):
+    """Full search/retrieval response from AI service"""
+    query_description: str = Field(description="AI description of uploaded image")
+    query_ingredients: List[str] = Field(default_factory=list)
+    top_k: List[FoodSearchItem] = Field(default_factory=list)
+
+
+# =====================================================
 # NOTIFICATION SCHEMAS
 # =====================================================
 

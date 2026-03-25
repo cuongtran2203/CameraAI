@@ -1,10 +1,7 @@
 <template>
   <AppLayout>
-    <!-- Loading Spinner -->
-    <LoadingSpinner v-if="loading" size="lg" />
-
     <!-- Main Content -->
-    <div v-show="!loading" class="layout-container flex flex-col h-screen">
+    <div class="layout-container flex flex-col h-screen">
       <!-- Main Content Area -->
       <main class="flex flex-1 overflow-hidden gap-6">
         <!-- Middle Content: Stats and Charts -->
@@ -232,11 +229,9 @@
 
 <script setup>
 import AppLayout from '../components/AppLayout.vue'
-import LoadingSpinner from '../components/LoadingSpinner.vue'
 import { ref, computed, shallowRef, onMounted, onUnmounted } from 'vue'
 import { useAuth } from '../composables/useAuth'
 import { Line, Bar } from 'vue-chartjs'
-import { api } from '../services/ApiService'
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -271,27 +266,8 @@ let wsReconnectTimer = null  // Timer for reconnection
 const wsConnected = ref(false)
 let isComponentMounted = true  // Flag to track component state
 
-// Loading state
-const loading = ref(true)
-
-// Fetch initial data from API
-const fetchInitialData = async () => {
-  try {
-    loading.value = true
-    const response = await api.get('/dashboard/stats')
-    if (response) {
-      console.log('Initial dashboard data loaded')
-    }
-  } catch (error) {
-    console.error('Error fetching initial data:', error)
-  } finally {
-    loading.value = false
-  }
-}
-
 // AI Stream Data from WebSocket
 const aiStreamData = ref(null)
-const aiStreamHistory = ref([])
 
 // Initial static data for charts
 const laborLabels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
@@ -306,8 +282,7 @@ const connectWebSocket = () => {
   // VITE_API_URL = http://localhost:8080/api (backend chạy port 8080)
   // WebSocket endpoint = ws://localhost:8080/ws/dashboard
   const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8080/api'
-  const baseUrl = apiUrl.replace(/\/api$/, '').replace(/^http/, 'ws')
-  const wsUrl = `${baseUrl}/ws/dashboard`
+  const wsUrl = apiUrl.replace(/\/api$/, '').replace(/^http/, 'ws') + '/ws/dashboard'
 
   console.log('WebSocket URL:', wsUrl)
 
@@ -357,41 +332,13 @@ const connectWebSocket = () => {
 
 // Handle AI Stream Data from WebSocket
 const handleAIStreamData = (data) => {
-  console.log('AI Stream Data received:', data)
   aiStreamData.value = data
 
-  // Add to history
-  aiStreamHistory.value.push({
-    timestamp: data.timestamp,
-    ...data
-  })
-
-  // Keep only last 10 records
-  if (aiStreamHistory.value.length > 10) {
-    aiStreamHistory.value.shift()
-  }
-
-  // Update charts with real data - validate before updating
-  // ParseInt to ensure we get clean numbers
-  if (data.summary && data.summary.overall_score) {
-    const rawScore = parseFloat(data.summary.overall_score)
-    if (!isNaN(rawScore) && isFinite(rawScore)) {
-      const newScore = Math.round(Math.min(100, Math.max(0, rawScore)))
-      // Create completely new array with validated numbers
-      const newData = [...oeiData.value.slice(1), newScore].map(v => Number(v) || 0)
-      oeiData.value = newData
-      console.log('OEI updated:', newData)
-    }
-  }
-
-  if (data.food_qc) {
-    // Update QC pass rate display
-    console.log('QC Pass Rate:', data.food_qc.pass_rate)
-  }
-
-  if (data.staff) {
-    // Update staff productivity
-    console.log('Staff Productivity:', data.staff.productivity_score)
+  // Update OEI chart if score is valid
+  if (data.summary?.overall_score != null) {
+    const rawScore = Number(data.summary.overall_score) || 0
+    const newScore = Math.round(Math.min(100, Math.max(0, rawScore)))
+    oeiData.value = [...oeiData.value.slice(1), newScore]
   }
 }
 
@@ -400,21 +347,21 @@ const currentSector = computed(() => {
   return user.value?.branch_name || 'North Logistics Hub'
 })
 
-// Quick stats from AI data
+// Quick stats from WebSocket data
 const peakTraffic = computed(() => {
-  if (!aiStreamData.value?.customers) return '14:00 - 16:00'
-  if (aiStreamData.value.customers.peak_detection) return 'Now (Peak)'
+  if (aiStreamData.value?.customers?.peak_detection) return 'Now (Peak)'
   return '14:00 - 16:00'
 })
 
 const qcPassRate = computed(() => {
-  if (!aiStreamData.value?.food_qc) return '99.2%'
-  return `${aiStreamData.value.food_qc.pass_rate}%`
+  if (aiStreamData.value?.food_qc?.pass_rate) return `${aiStreamData.value.food_qc.pass_rate}%`
+  return '99.2%'
 })
 
 const oeiValue = computed(() => {
-  if (!aiStreamData.value?.summary) return 33.1
-  return aiStreamData.value.summary.overall_score
+  if (aiStreamData.value?.summary?.overall_score) return aiStreamData.value.summary.overall_score
+  // Use mock data if no real-time data
+  return 85
 })
 
 const criticalAlerts = computed(() => {
@@ -427,11 +374,7 @@ const alertCount = computed(() => {
 })
 
 // Cleanup on unmount
-onMounted(async () => {
-  // Step 1: Fetch initial data from API
-  await fetchInitialData()
-
-  // Step 2: Then connect WebSocket for real-time updates
+onMounted(() => {
   connectWebSocket()
 })
 
@@ -531,12 +474,3 @@ const laborChartOptions = {
   }
 }
 </script>
-<!-- 
-<style scoped>
-:deep(.apexcharts-xaxis-label) {
-  transform: translateX(-5px);
-}
-:deep(.apexcharts-xaxis) {
-  padding: 0 5px;
-}
-</style> -->
