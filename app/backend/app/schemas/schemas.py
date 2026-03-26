@@ -270,11 +270,11 @@ class CameraResponse(BaseSchema):
     code: str
     rtsp_url: str
     ai_hls_url: Optional[str] = None  # AI processed HLS stream
-    location: Optional[str]
+    location: Optional[str] = None
     stream_type: str
-    resolution: str
-    fps: int
-    ai_enabled: dict
+    resolution: Optional[str] = None
+    fps: Optional[int] = None
+    ai_enabled: Optional[dict] = None
     is_active: bool
     last_online: Optional[datetime]
     created_at: datetime

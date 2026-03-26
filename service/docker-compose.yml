@@ -1,0 +1,42 @@
+version: "1.0"
+
+services:
+  image_matching:
+    build:
+      context: ./Image_matching
+      dockerfile: Dockerfile
+    container_name: image_matching
+    ports:
+      - "8000:8000"
+    env_file:
+      - ./Config/.env
+    restart: unless-stopped
+    environment:
+      PYTHONUNBUFFERED: "1"
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+
+  image_retrieval:
+    build:
+      context: ./Image_Retrieval
+      dockerfile: Dockerfile
+    container_name: image_Retrieval
+    ports:
+      - "8001:8001"
+    env_file:
+      - ./Config/.env
+    restart: unless-stopped
+    environment:
+      PYTHONUNBUFFERED: "1"
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]

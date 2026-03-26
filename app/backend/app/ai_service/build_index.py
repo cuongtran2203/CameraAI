@@ -7,7 +7,7 @@ import faiss
 import numpy as np
 from PIL import Image
 
-from utils import analyze_food_image
+from vision import analyze_food_image
 
 
 SUPPORTED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp"}

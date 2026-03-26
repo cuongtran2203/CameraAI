@@ -1,16 +1,15 @@
+import base64
 import io
 import json
-import base64
-from typing import List, Dict, Any
+from typing import Any, Dict, List
 
-import faiss
 import numpy as np
 import torch
-from PIL import Image
 from fastapi import HTTPException
+from PIL import Image
 
-from model import model, preprocess, tokenizer, client, DEVICE, VLM_MODEL
-from config import W_IMG, W_DENSE, W_SPARSE
+from config import W_DENSE, W_IMG, W_SPARSE
+from model import DEVICE, VLM_MODEL, client, model, preprocess, tokenizer
 
 
 def l2_normalize(vec: np.ndarray) -> np.ndarray:
@@ -18,20 +17,6 @@ def l2_normalize(vec: np.ndarray) -> np.ndarray:
     if norm == 0:
         return vec
     return vec / norm
-
-
-def faiss_cosine_similarity(vec_a: np.ndarray, vec_b: np.ndarray) -> float:
-    a = vec_a.astype("float32").reshape(1, -1)
-    b = vec_b.astype("float32").reshape(1, -1)
-
-    faiss.normalize_L2(a)
-    faiss.normalize_L2(b)
-
-    index = faiss.IndexFlatIP(a.shape[1])
-    index.add(b)
-    scores, _ = index.search(a, 1)
-
-    return float(scores[0][0])
 
 
 def pil_to_data_url(image: Image.Image, fmt: str = "JPEG") -> str:
@@ -75,6 +60,10 @@ def encode_text(text: str) -> np.ndarray:
     return text_features[0].detach().cpu().numpy().astype(np.float32)
 
 
+def normalize_ingredient(text: str) -> str:
+    return " ".join(text.strip().lower().replace(".", "").split())
+
+
 def encode_text_list(texts: List[str]) -> List[np.ndarray]:
     clean = [normalize_ingredient(t) for t in texts if t and t.strip()]
     if not clean:
@@ -88,84 +77,57 @@ def encode_text_list(texts: List[str]) -> List[np.ndarray]:
     return [feat.detach().cpu().numpy().astype(np.float32) for feat in text_features]
 
 
-def normalize_ingredient(text: str) -> str:
-    return text.strip().lower().replace(".", "").replace("  ", " ")
-
-
 def fuse_features(
     image_vec: np.ndarray,
     dense_vec: np.ndarray,
-    sparse_vec: np.ndarray
+    sparse_vec: np.ndarray,
 ) -> np.ndarray:
     fused = (W_IMG * image_vec) + (W_DENSE * dense_vec) + (W_SPARSE * sparse_vec)
     return l2_normalize(fused.astype(np.float32))
 
 
-def ingredient_similarity(ingredients_a: List[str], ingredients_b: List[str]) -> float:
-    if not ingredients_a or not ingredients_b:
-        return 0.0
-
-    emb_a = encode_text_list(ingredients_a)
-    emb_b = encode_text_list(ingredients_b)
-
-    if not emb_a or not emb_b:
-        return 0.0
-
-    mat_a = np.stack(emb_a).astype("float32")
-    mat_b = np.stack(emb_b).astype("float32")
-
-    faiss.normalize_L2(mat_a)
-    faiss.normalize_L2(mat_b)
-
-    index_b = faiss.IndexFlatIP(mat_b.shape[1])
-    index_b.add(mat_b)
-    scores_ab, _ = index_b.search(mat_a, 1)
-
-    index_a = faiss.IndexFlatIP(mat_a.shape[1])
-    index_a.add(mat_a)
-    scores_ba, _ = index_a.search(mat_b, 1)
-
-    return float((scores_ab.mean() + scores_ba.mean()) / 2.0)
-
-
 def parse_vlm_json(raw_text: str) -> Dict[str, Any]:
     raw_text = raw_text.strip()
 
-    # bóc khối ```json ... ``` nếu model trả markdown
     if raw_text.startswith("```"):
-        raw_text = raw_text.strip("`")
-        raw_text = raw_text.replace("json\n", "", 1).strip()
+        lines = raw_text.splitlines()
+        if lines and lines[0].startswith("```"):
+            lines = lines[1:]
+        if lines and lines[-1].startswith("```"):
+            lines = lines[:-1]
+        raw_text = "\n".join(lines).strip()
 
     try:
-        data = json.loads(raw_text)
+        return json.loads(raw_text)
     except json.JSONDecodeError:
         raise HTTPException(
             status_code=500,
-            detail=f"Model did not return valid JSON: {raw_text}"
+            detail=f"Model did not return valid JSON: {raw_text}",
         )
-
-    return data
 
 
 def call_vlm_vision(image: Image.Image) -> Dict[str, Any]:
     image_url = pil_to_data_url(image)
 
     prompt = """
-You are analyzing a food image for fine-grained food retrieval.
+        You are an expert visual food analyst.
 
-Return ONLY valid JSON:
-{
-  "dense_caption": "one detailed sentence describing the dish, cooking style, visible ingredients, side items, sauces, and plating",
-  "ingredients": ["ingredient 1", "ingredient 2", "ingredient 3"]
-}
+        Your task is to identify ONLY physically visible food components in the image.
 
-Rules:
-- Focus only on visible food.
-- Ingredients should be short noun phrases.
-- No markdown.
-- No extra keys.
-- No explanation outside JSON.
-"""
+        Return exactly one JSON object with this schema:
+        {
+        "dense_caption": "one detailed sentence describing the dish, cooking style, visible ingredients, sauces, and plating",
+        "ingredients": ["visible ingredient 1", "visible ingredient 2", "visible ingredient 3"]
+        }
+
+        Rules:
+        - Only list ingredients that are clearly visible.
+        - Do not infer hidden seasonings, oil, sugar, salt, or sauces unless visible.
+        - Use short noun phrases.
+        - Output JSON only.
+        - Do not wrap the response in markdown.
+        - Do not use triple backticks.
+    """
 
     try:
         response = client.chat.completions.create(
@@ -192,7 +154,6 @@ Rules:
     data = parse_vlm_json(raw_text)
 
     dense_caption = str(data.get("dense_caption", "")).strip()
-
     ingredients = data.get("ingredients", [])
     if not isinstance(ingredients, list):
         ingredients = []
@@ -201,7 +162,7 @@ Rules:
 
     return {
         "dense_caption": dense_caption,
-        "ingredients": ingredients
+        "ingredients": ingredients,
     }
 
 
@@ -215,30 +176,12 @@ def analyze_food_image(image: Image.Image) -> Dict[str, Any]:
     image_vec = encode_image(image)
     dense_vec = encode_text(dense_caption)
     sparse_vec = encode_text(sparse_caption)
-
+    ingredient_vecs = encode_text_list(ingredients)
     fused_vec = fuse_features(image_vec, dense_vec, sparse_vec)
 
     return {
         "dense_caption": dense_caption,
         "ingredients": ingredients,
-        "image_vec": image_vec,
-        "dense_vec": dense_vec,
-        "sparse_vec": sparse_vec,
+        "ingredient_vecs": ingredient_vecs,
         "fused_vec": fused_vec,
-    }
-
-
-def build_record_from_image_path(image_path: str, item_id: str) -> Dict[str, Any]:
-    image = load_image_from_path(image_path)
-    result = analyze_food_image(image)
-
-    return {
-        "id": item_id,
-        "image_path": image_path,
-        "description": result["dense_caption"],
-        "ingredients": result["ingredients"],
-        "image_vec": result["image_vec"],
-        "dense_vec": result["dense_vec"],
-        "sparse_vec": result["sparse_vec"],
-        "fused_vec": result["fused_vec"],
     }

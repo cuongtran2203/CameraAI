@@ -5,6 +5,7 @@ from app.api.staff import router as staff_router
 from app.api.dashboard import router as dashboard_router
 from app.api.food import router as food_router
 from app.api.websocket import router as websocket_router
+from app.api.system import router as system_router
 
 __all__ = [
     "auth_router",
@@ -12,5 +13,6 @@ __all__ = [
     "staff_router",
     "dashboard_router",
     "food_router",
-    "websocket_router"
+    "websocket_router",
+    "system_router",
 ]

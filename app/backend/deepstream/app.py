@@ -7,6 +7,7 @@ import pyds
 import json
 import os
 import time
+import subprocess
 from datetime import datetime, timezone
 
 gi.require_version("Gst", "1.0")
@@ -40,13 +41,17 @@ MIN_ASPECT_RATIO = 0.3
 MAX_ASPECT_RATIO = 1.5
 
 # Tracker paths thật từ DeepStream 8.0 image của bạn
-TRACKER_LIB_FILE = "/opt/nvidia/deepstream/deepstream-8.0/lib/libnvds_nvmultiobjecttracker.so"
-TRACKER_CONFIG_FILE = "/opt/nvidia/deepstream/deepstream-8.0/samples/configs/deepstream-app/config_tracker_NvDCF_perf.yml"
+TRACKER_LIB_FILE = "/opt/nvidia/deepstream/deepstream-7.0/lib/libnvds_nvmultiobjecttracker.so"
+TRACKER_CONFIG_FILE = "/opt/nvidia/deepstream/deepstream-7.0/samples/configs/deepstream-app/config_tracker_NvDCF_perf.yml"
 
 kafka_producer = None
 kafka_topic = None
 last_kafka_sent_ts = 0.0
 kafka_interval_sec = 1.0
+
+# Deferred source_bin → streammux link (uridecodebin pads are async)
+_streammux = None
+_streammux_sinkpad = None
 
 
 def get_roi():
@@ -325,10 +330,20 @@ def cb_newpad(decodebin, decoder_src_pad, data):
 
     source_bin = data
     ghost_pad = source_bin.get_static_pad("src")
-    if ghost_pad.set_target(decoder_src_pad):
-        print("Linked decoder pad to source bin")
-    else:
-        print("Failed to link decoder pad to source bin", file=sys.stderr)
+
+    # Set ghost pad target first (required before linking)
+    if not ghost_pad.set_target(decoder_src_pad):
+        print("Failed to set ghost pad target", file=sys.stderr)
+        return
+    print("Linked decoder pad to source bin")
+
+    # Now the ghost pad has a target — link to streammux sinkpad
+    if _streammux is not None and _streammux_sinkpad is not None:
+        ret = ghost_pad.link(_streammux_sinkpad)
+        if ret != Gst.PadLinkReturn.OK:
+            print(f"Failed to link source bin to streammux: {ret}", file=sys.stderr)
+        else:
+            print("Linked source bin to streammux")
 
 
 def decodebin_child_added(child_proxy, obj, name, user_data):
@@ -336,7 +351,13 @@ def decodebin_child_added(child_proxy, obj, name, user_data):
         obj.connect("child-added", decodebin_child_added, user_data)
 
 
-def create_source_bin(index: int, uri: str):
+def create_source_bin(index: int, uri: str, streammux=None, sinkpad=None):
+    global _streammux, _streammux_sinkpad
+
+    if streammux is not None:
+        _streammux = streammux
+        _streammux_sinkpad = sinkpad
+
     bin_name = f"source-bin-{index:02d}"
     nbin = Gst.Bin.new(bin_name)
     if not nbin:
@@ -352,6 +373,7 @@ def create_source_bin(index: int, uri: str):
 
     nbin.add(uri_decode_bin)
 
+    # No target yet — cb_newpad sets it when uridecodebin creates its src pad
     ghost_pad = Gst.GhostPad.new_no_target("src", Gst.PadDirection.SRC)
     if not ghost_pad:
         raise RuntimeError("Failed to add ghost pad in source bin")
@@ -385,30 +407,31 @@ def create_rtsp_server():
 
 def on_bus_message(bus, message, loop, pipeline):
     msg_type = message.type
+    print(f"[BUS] {msg_type}", flush=True)
 
     if msg_type == Gst.MessageType.EOS:
-        print("EOS reached, looping file input...")
+        print("EOS reached, looping file input...", flush=True)
         success = pipeline.seek_simple(
             Gst.Format.TIME,
             Gst.SeekFlags.FLUSH | Gst.SeekFlags.KEY_UNIT,
             0,
         )
         if not success:
-            print("Seek failed on EOS, stopping.", file=sys.stderr)
-            loop.quit()
+            print("Seek failed on EOS, stopping.", file=sys.stderr, flush=True)
+        loop.quit()
 
     elif msg_type == Gst.MessageType.ERROR:
         err, debug = message.parse_error()
-        print(f"ERROR: {err}", file=sys.stderr)
+        print(f"ERROR: {err}", file=sys.stderr, flush=True)
         if debug:
-            print(f"DEBUG: {debug}", file=sys.stderr)
+            print(f"DEBUG: {debug}", file=sys.stderr, flush=True)
         loop.quit()
 
     elif msg_type == Gst.MessageType.WARNING:
         err, debug = message.parse_warning()
-        print(f"WARNING: {err}", file=sys.stderr)
+        print(f"WARNING: {err}", file=sys.stderr, flush=True)
         if debug:
-            print(f"DEBUG: {debug}", file=sys.stderr)
+            print(f"DEBUG: {debug}", file=sys.stderr, flush=True)
 
     return True
 
@@ -474,7 +497,7 @@ def build_pipeline(input_uri: str, infer_config_path: str):
     rtppay.set_property("pt", 96)
     rtppay.set_property("config-interval", -1)
 
-    udpsink.set_property("host", "127.0.0.1")
+    udpsink.set_property("host", "0.0.0.0")
     udpsink.set_property("port", UDP_PORT)
     udpsink.set_property("async", False)
     udpsink.set_property("sync", 1)
@@ -482,7 +505,12 @@ def build_pipeline(input_uri: str, infer_config_path: str):
     caps = Gst.Caps.from_string("video/x-raw(memory:NVMM), format=I420")
     capsfilter.set_property("caps", caps)
 
-    source_bin = create_source_bin(0, input_uri)
+    sinkpad = streammux.request_pad_simple("sink_0")
+    if not sinkpad:
+        raise RuntimeError("Unable to get streammux sink pad")
+
+    # Pass streammux+sinkpad so cb_newpad can link asynchronously
+    source_bin = create_source_bin(0, input_uri, streammux=streammux, sinkpad=sinkpad)
 
     pipeline.add(source_bin)
     pipeline.add(streammux)
@@ -495,17 +523,6 @@ def build_pipeline(input_uri: str, infer_config_path: str):
     pipeline.add(encoder)
     pipeline.add(rtppay)
     pipeline.add(udpsink)
-
-    sinkpad = streammux.request_pad_simple("sink_0")
-    if not sinkpad:
-        raise RuntimeError("Unable to get streammux sink pad")
-
-    srcpad = source_bin.get_static_pad("src")
-    if not srcpad:
-        raise RuntimeError("Unable to get source bin src pad")
-
-    if srcpad.link(sinkpad) != Gst.PadLinkReturn.OK:
-        raise RuntimeError("Failed to link source bin to streammux")
 
     if not streammux.link(pgie):
         raise RuntimeError("Failed to link streammux -> pgie")
@@ -583,23 +600,85 @@ def main():
 
     kafka_interval_sec = max(args.kafka_interval_ms / 1000.0, 0.1)
 
+    sys.stdout.flush()
+    sys.stderr.flush()
+
+    # --- DIAGNOSTIC: Check key files exist ---
+    print(f"[DIAG] Input file: {args.input}", flush=True)
+    print(f"[DIAG] Config file: {args.infer_config}", flush=True)
+    if not os.path.exists(args.infer_config):
+        print(f"[DIAG] FATAL: Config file NOT FOUND: {args.infer_config}", flush=True)
+    if args.input.startswith("file://"):
+        video_path = args.input[7:]
+        if not os.path.exists(video_path):
+            print(f"[DIAG] FATAL: Video file NOT FOUND: {video_path}", flush=True)
+        else:
+            print(f"[DIAG] Video file OK: {video_path}", flush=True)
+    print(f"[DIAG] Tracker lib: {TRACKER_LIB_FILE}", flush=True)
+    print(f"[DIAG] Tracker config: {TRACKER_CONFIG_FILE}", flush=True)
+    print(f"[DIAG] Tracker lib exists: {os.path.exists(TRACKER_LIB_FILE)}", flush=True)
+    print(f"[DIAG] Tracker config exists: {os.path.exists(TRACKER_CONFIG_FILE)}", flush=True)
+    sys.stdout.flush()
+
     Gst.init(None)
 
-    init_kafka(args.kafka_bootstrap, args.kafka_topic)
+    print("[DIAG] Gst.init done", flush=True)
+    sys.stdout.flush()
+
+    # --- DIAGNOSTIC: Verify all required GStreamer elements exist ---
+    required_elements = [
+        "nvstreammux", "nvinfer", "nvtracker", "nvvideoconvert",
+        "nvdsosd", "nvv4l2h264enc", "rtph264pay", "udpsink",
+        "uridecodebin", "capsfilter",
+    ]
+    for elem_name in required_elements:
+        elem = Gst.ElementFactory.make(elem_name, elem_name)
+        status = "OK" if elem else "MISSING"
+        print(f"[DIAG] Element {elem_name}: {status}", flush=True)
+    sys.stdout.flush()
 
     loop = GLib.MainLoop()
 
+    print("[DIAG] About to create RTSP server...", flush=True)
+    sys.stdout.flush()
     create_rtsp_server()
+    print("[DIAG] RTSP server created OK", flush=True)
+    sys.stdout.flush()
+
+    print("[DIAG] About to build pipeline...", flush=True)
+    sys.stdout.flush()
     pipeline = build_pipeline(args.input, args.infer_config)
+    print("[DIAG] Pipeline built OK", flush=True)
+    sys.stdout.flush()
 
     bus = pipeline.get_bus()
     bus.add_signal_watch()
     bus.connect("message", on_bus_message, loop, pipeline)
 
-    print("Starting pipeline...")
+    print("Starting pipeline...", flush=True)
+
     ret = pipeline.set_state(Gst.State.PLAYING)
+    print(f"[DIAG] set_state PLAYING returned: {ret}", flush=True)
     if ret == Gst.StateChangeReturn.FAILURE:
+        # Drain all bus messages for the real error
+        while True:
+            msg = bus.pop_filtered(Gst.MessageType.ERROR)
+            if not msg:
+                break
+            err, debug = msg.parse_error()
+            print(f"[BUS ERROR] {err}", file=sys.stderr, flush=True)
+            if debug:
+                print(f"[BUS DEBUG] {debug}", file=sys.stderr, flush=True)
         raise RuntimeError("Unable to set pipeline to PLAYING")
+    elif ret == Gst.StateChangeReturn.ASYNC:
+        # TensorRT engine build happens here — can take 2-5 min on first run
+        print("[DIAG] Waiting for pipeline to transition to PLAYING (TensorRT engine build)...", flush=True)
+        ok, state, pending = pipeline.get_state(Gst.SECOND * 300)
+        print(f"[DIAG] get_state result: ok={ok}, state={state}, pending={pending}", flush=True)
+        if ok != Gst.StateChangeReturn.SUCCESS:
+            print("[DIAG] Pipeline failed to reach PLAYING state", file=sys.stderr, flush=True)
+            raise RuntimeError("Pipeline failed to reach PLAYING state")
+        print("[DIAG] Pipeline is now PLAYING!", flush=True)
 
     try:
         loop.run()

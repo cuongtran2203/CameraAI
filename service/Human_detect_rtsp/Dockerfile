@@ -1,4 +1,5 @@
 FROM nvcr.io/nvidia/deepstream:8.0-triton-multiarch
+# convert
 
 WORKDIR /workspace
 
@@ -13,7 +14,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 RUN git clone https://github.com/marcoslucianops/DeepStream-Yolo.git /opt/DeepStream-Yolo
 
-ENV CUDA_VER=12.8
+ENV CUDA_VER=12.8 
+# 12.2
 
 RUN dos2unix /opt/DeepStream-Yolo/nvdsinfer_custom_impl_Yolo/Makefile && \
     make -C /opt/DeepStream-Yolo/nvdsinfer_custom_impl_Yolo clean && \

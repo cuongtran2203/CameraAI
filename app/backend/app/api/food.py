@@ -397,6 +397,9 @@ async def search_food(
         "camera_id": (camera_id or ""),
     }
     
+    # Default fallback in case the AI service call fails
+    ai_result = {"results": [], "query_image": None}
+
     try:
         async with httpx.AsyncClient(timeout=60.0) as client:
             response = await client.post(
@@ -408,19 +411,10 @@ async def search_food(
             ai_result = response.json()
 
     except httpx.TimeoutException:
-        # Fallback: return mock data when AI times out
-        logger.warning("AI service timed out, returning mock data.")
-        # ai_result = _get_mock_search_response(top_k)
-        # print(AI_SERVICE_URL)
+        logger.warning("AI service timed out, returning empty results.")
     except httpx.HTTPStatusError as exc:
-        # Fallback: return mock data when AI returns error
-        logger.warning(f"AI service error ({exc.response.status_code}), returning mock data.")
-        # ai_result = _get_mock_search_response(top_k)
-        # print(AI_SERVICE_URL)
+        logger.warning(f"AI service error ({exc.response.status_code}), returning empty results.")
     except Exception as exc:
-        # Fallback: any connection error → return mock data
-        logger.warning(f"AI service unreachable: {exc}. Returning mock data for demo.")
-        # ai_result = _get_mock_search_response(top_k)
-        # print(AI_SERVICE_URL)
+        logger.warning(f"AI service unreachable: {exc}. Returning empty results.")
 
     return ai_result

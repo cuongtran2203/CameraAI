@@ -1,72 +1,92 @@
 import json
+import time
 from pathlib import Path
+from typing import List
 
 import faiss
 import numpy as np
 from PIL import Image
 
-from utils import encode_image, encode_text, fuse_features, call_vlm_vision
+from utils import analyze_food_image
 
 
-def build_index(image_dir: str, output_index: str, output_metadata: str):
-    image_dir = Path(image_dir)
+SUPPORTED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp"}
 
-    if not image_dir.exists():
-        raise RuntimeError(f"Image directory does not exist: {image_dir}")
 
-    Path(output_index).parent.mkdir(parents=True, exist_ok=True)
-    Path(output_metadata).parent.mkdir(parents=True, exist_ok=True)
+def list_image_files(image_dir: Path) -> List[Path]:
+    files = [p for p in image_dir.iterdir() if p.is_file() and p.suffix.lower() in SUPPORTED_EXTENSIONS]
+    return sorted(files)
 
-    items = []
-    vectors = []
 
-    image_files = (
-        list(image_dir.glob("*.jpg"))
-        + list(image_dir.glob("*.png"))
-        + list(image_dir.glob("*.jpeg"))
-    )
+def build_index(image_dir: str, output_index: str, output_metadata: str) -> None:
+    image_dir_path = Path(image_dir)
+    output_index_path = Path(output_index)
+    output_metadata_path = Path(output_metadata)
 
+    if not image_dir_path.exists():
+        raise RuntimeError(f"Image directory does not exist: {image_dir_path}")
+
+    image_files = list_image_files(image_dir_path)
     if not image_files:
-        raise RuntimeError(f"No images found in {image_dir}")
+        raise RuntimeError(f"No supported images found in: {image_dir_path}")
 
-    for i, path in enumerate(image_files):
-        image = Image.open(path).convert("RGB")
+    output_index_path.parent.mkdir(parents=True, exist_ok=True)
+    output_metadata_path.parent.mkdir(parents=True, exist_ok=True)
 
-        image_vec = encode_image(image)
+    metadata = []
+    fused_vectors = []
 
-        vlm_result = call_vlm_vision(image)
-        dense_caption = vlm_result["dense_caption"]
-        ingredients = vlm_result["ingredients"]
+    total_start = time.perf_counter()
 
-        dense_vec = encode_text(dense_caption)
-        sparse_vec = encode_text(", ".join(ingredients))
+    for idx, image_path in enumerate(image_files):
+        item_start = time.perf_counter()
 
-        fused_vec = fuse_features(image_vec, dense_vec, sparse_vec).astype("float32")
-        vectors.append(fused_vec)
+        try:
+            image = Image.open(image_path).convert("RGB")
+            result = analyze_food_image(image)
 
-        items.append({
-            "id": f"item_{i:06d}",
-            "image_path": str(path),
-            "description": dense_caption,
-            "ingredients": ingredients,
-        })
+            fused_vec = result["fused_vec"].astype("float32")
+            ingredient_vecs = [
+                vec.astype("float32").tolist() for vec in result["ingredient_vecs"]
+            ]
 
-        print(f"Indexed: {path.name}")
+            fused_vectors.append(fused_vec)
 
-    mat = np.stack(vectors).astype("float32")
-    faiss.normalize_L2(mat)
+            metadata.append(
+                {
+                    "id": f"item_{idx:06d}",
+                    "image_path": str(image_path),
+                    "description": result["dense_caption"],
+                    "ingredients": result["ingredients"],
+                    "ingredient_vecs": ingredient_vecs,
+                }
+            )
 
-    index = faiss.IndexFlatIP(mat.shape[1])
-    index.add(mat)
+            item_time = time.perf_counter() - item_start
+            print(f"[{idx + 1}/{len(image_files)}] {image_path.name} | total={item_time:.2f}s")
 
-    faiss.write_index(index, output_index)
+        except Exception as exc:
+            print(f"[WARN] Failed to process {image_path.name}: {exc}")
 
-    with open(output_metadata, "w", encoding="utf-8") as f:
-        json.dump(items, f, ensure_ascii=False, indent=2)
+    if not fused_vectors:
+        raise RuntimeError("No images were successfully indexed.")
 
-    print(f"Saved FAISS index to: {output_index}")
-    print(f"Saved metadata to: {output_metadata}")
-    print(f"Total indexed images: {len(items)}")
+    matrix = np.stack(fused_vectors).astype("float32")
+    faiss.normalize_L2(matrix)
+
+    index = faiss.IndexFlatIP(matrix.shape[1])
+    index.add(matrix)
+
+    faiss.write_index(index, str(output_index_path))
+
+    with output_metadata_path.open("w", encoding="utf-8") as f:
+        json.dump(metadata, f, ensure_ascii=False, indent=2)
+
+    total_time = time.perf_counter() - total_start
+    print(f"\nSaved index: {output_index_path}")
+    print(f"Saved metadata: {output_metadata_path}")
+    print(f"Indexed items: {len(metadata)}")
+    print(f"Total build time: {total_time:.2f}s")
 
 
 if __name__ == "__main__":

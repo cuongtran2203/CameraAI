@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   # =====================================================
   # PostgreSQL Database
@@ -9,7 +7,7 @@ services:
     container_name: camera_analyst_db
     restart: unless-stopped
     environment:
-      POSTGRES_USER: ngohongnguyen
+      POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: camera_analyst
     ports:
@@ -17,7 +15,7 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U ngohongnguyen -d camera_analyst" ]
+      test: ["CMD-SHELL", "pg_isready -U postgres -d camera_analyst"]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -34,7 +32,7 @@ services:
     volumes:
       - redis_data:/data
     healthcheck:
-      test: [ "CMD", "redis-cli", "ping" ]
+      test: ["CMD", "redis-cli", "ping"]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -55,7 +53,7 @@ services:
       - zookeeper_data:/var/lib/zookeeper/data
       - zookeeper_log:/var/lib/zookeeper/log
     healthcheck:
-      test: [ "CMD", "nc", "-z", "localhost", "2181" ]
+      test: ["CMD", "nc", "-z", "localhost", "2181"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -86,7 +84,7 @@ services:
     volumes:
       - kafka_data:/var/lib/kafka/data
     healthcheck:
-      test: ["CMD", "kafka-topics", "--bootstrap-server", "localhost:9092", "--list"]
+      test: ["CMD-SHELL", "timeout 5 bash -c 'cat /dev/null < /dev/tcp/localhost/9092' && echo OK"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -109,6 +107,39 @@ services:
       KAFKA_CLUSTERS_0_ZOOKEEPER: zookeeper:2181
 
   # =====================================================
+  # Main FastAPI Backend
+  # =====================================================
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: camera_analyst_backend
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    env_file:
+      - path: ../.env.example
+        required: false
+      - path: ../.env
+        required: false
+    environment:
+      PYTHONUNBUFFERED: "1"
+      PYTHONPATH: "/app"
+      DATABASE_URL: "postgresql+asyncpg://postgres:postgres@postgres:5432/camera_analyst"
+      DATABASE_URL_SYNC: "postgresql://postgres:postgres@postgres:5432/camera_analyst"
+      KAFKA_BOOTSTRAP_SERVERS: "kafka:9092"
+      REDIS_URL: "redis://redis:6379"
+      AI_SERVICE_URL: "http://ai_service:8000"
+      SECRET_KEY: "change-this-secret-key-in-production"
+
+  # =====================================================
   # AI Processing Service (Computer Vision & Retrieval)
   # =====================================================
   ai_service:
@@ -118,19 +149,26 @@ services:
     container_name: camera_analyst_ai
     ports:
       - "8000:8000"
-    env_file:
-      - .env.example
     restart: unless-stopped
+    env_file:
+      - path: ../.env.example
+        required: false
+      - path: ../.env
+        required: false
     environment:
-      - PYTHONUNBUFFERED=1
-      - PYTHONPATH=/app
+      PYTHONUNBUFFERED: "1"
+      PYTHONPATH: "/app"
+      IMAGE_BASE_PATH: "/app"
+    volumes:
+      - ./app/ai_service/data:/app/ai_service/data:ro
+      - ./app/ai_service/images:/app/images:ro
     deploy:
       resources:
         reservations:
           devices:
             - driver: nvidia
               count: all
-              capabilities: [ gpu ]
+              capabilities: [gpu]
 
   # =====================================================
   # DeepStream Human Detection Service
@@ -153,15 +191,57 @@ services:
           devices:
             - driver: nvidia
               count: all
-              capabilities: [ gpu ]
+              capabilities: [gpu]
     volumes:
       - ./deepstream:/workspace
     command: >
-      python3 /workspace/app.py
+      python3 -u /workspace/app.py
       --input file:///workspace/videos/test.mp4
       --kafka-bootstrap kafka:9092
       --kafka-topic ai.customer.detections
       --kafka-interval-ms 1000
+
+  # =====================================================
+  # Frontend (Vue 3 + Vite + Nginx)
+  # =====================================================
+  frontend:
+    build:
+      context: ../frontend
+      dockerfile: Dockerfile
+      args:
+        VITE_API_URL: http://localhost:8080/api
+        VITE_WS_URL: ws://localhost:8080
+        VITE_AI_SERVICE_URL: http://localhost:8000
+    container_name: camera_analyst_frontend
+    restart: unless-stopped
+    ports:
+      - "5173:80"
+    depends_on:
+      - backend
+    volumes:
+      - ./mediamtx/hls:/var/run/mediamtx/hls:ro
+
+  # =====================================================
+  # MediaMTX - RTSP to WebRTC Proxy (for Chrome)
+  # =====================================================
+  mediamtx:
+    image: bluenviron/mediamtx:latest
+    container_name: camera_analyst_mediamtx
+    restart: unless-stopped
+    ports:
+      - "8889:8889"    # WebRTC (for browser)
+      - "8888:8888"    # HLS (fallback)
+      - "1935:1935"    # RTMP
+    volumes:
+      - ./mediamtx/mediamtx.yml:/mediamtx.yml:ro
+      - ./mediamtx/hls:/hls
+    networks:
+      - default
+
+networks:
+  default:
+    name: camera_analyst_network
+    driver: bridge
 
 volumes:
   postgres_data:

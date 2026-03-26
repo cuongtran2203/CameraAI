@@ -1,6 +1,7 @@
 import io
 import json
 import base64
+import re
 from typing import List, Dict, Any
 
 import faiss
@@ -117,24 +118,75 @@ def ingredient_similarity(ingredients_a: List[str], ingredients_b: List[str]) ->
     return float((scores_ab.mean() + scores_ba.mean()) / 2.0)
 
 
+def _strip_code_fences(text: str) -> str:
+    text = text.strip()
+
+    # Xóa ```json ở đầu nếu có
+    text = re.sub(r"^```json\s*", "", text, flags=re.IGNORECASE)
+
+    # Xóa ``` ở đầu nếu có
+    text = re.sub(r"^```\s*", "", text)
+
+    # Xóa ``` ở cuối nếu có
+    text = re.sub(r"\s*```$", "", text)
+
+    return text.strip()
+
+
+def _extract_json_object(text: str) -> str:
+    """
+    Cố gắng lấy block JSON object đầu tiên từ text.
+    """
+    match = re.search(r"\{.*\}", text, flags=re.DOTALL)
+    if not match:
+        raise ValueError("No JSON object found in model response")
+    return match.group(0)
+
+
+def parse_model_json(raw_text: str) -> Dict[str, Any]:
+    if not raw_text or not raw_text.strip():
+        raise HTTPException(status_code=500, detail="Model returned empty response")
+
+    cleaned = _strip_code_fences(raw_text)
+
+    # Thử parse trực tiếp trước
+    try:
+        return json.loads(cleaned)
+    except json.JSONDecodeError:
+        pass
+
+    # Fallback: trích object JSON đầu tiên
+    try:
+        json_text = _extract_json_object(cleaned)
+        return json.loads(json_text)
+    except Exception:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Model did not return valid JSON: {raw_text}"
+        )
+
+
 def call_vlm_vision(image: Image.Image) -> Dict[str, Any]:
     image_url = pil_to_data_url(image)
 
     prompt = """
-        You are analyzing a food image for fine-grained food retrieval.
+        You are an expert visual food analyst.
 
-        Return ONLY valid JSON with this exact schema:
+        Your task is to identify ONLY physically visible food components in the image.
+
+        Return exactly one JSON object with this schema:
         {
-        "dense_caption": "one detailed sentence describing the dish, cooking style, side items, plating, and visible ingredients",
-        "ingredients": ["ingredient or food item 1", "ingredient or food item 2", "ingredient or food item 3"]
+        "dense_caption": "one detailed sentence describing the dish, cooking style, visible ingredients, sauces, and plating",
+        "ingredients": ["visible ingredient 1", "visible ingredient 2", "visible ingredient 3"]
         }
 
         Rules:
-        - Focus only on visible food.
-        - Ingredients should be short phrases.
-        - No markdown.
-        - No extra keys.
-        - No explanation outside JSON.
+        - Only list ingredients that are clearly visible.
+        - Do not infer hidden seasonings, oil, sugar, salt, or sauces unless visible.
+        - Use short noun phrases.
+        - Output JSON only.
+        - Do not wrap the response in markdown.
+        - Do not use triple backticks.
     """
 
     try:
@@ -159,13 +211,7 @@ def call_vlm_vision(image: Image.Image) -> Dict[str, Any]:
     except Exception:
         raise HTTPException(status_code=500, detail="Failed to parse model response")
 
-    try:
-        data = json.loads(raw_text)
-    except json.JSONDecodeError:
-        raise HTTPException(
-            status_code=500,
-            detail=f"Model did not return valid JSON: {raw_text}"
-        )
+    data = parse_model_json(raw_text)
 
     dense_caption = str(data.get("dense_caption", "")).strip()
     ingredients = data.get("ingredients", [])

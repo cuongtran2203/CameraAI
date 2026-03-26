@@ -41,9 +41,13 @@ RTSP_URL = os.environ.get(
 INFER_CONFIG = "configs/config_infer_primary.txt"
 TRACKER_CONFIG = "configs/tracker_config.yml"
 
-# Stream dimensions
+# Stream dimensions (internal processing)
 STREAM_WIDTH = 1920
 STREAM_HEIGHT = 1080
+
+# Output stream dimensions (sent to RTSP — smaller = less bandwidth)
+OUTPUT_WIDTH  = 480
+OUTPUT_HEIGHT = 480
 
 # RTSP output bitrate (bps)
 ENCODER_BITRATE = 4_000_000
@@ -273,8 +277,12 @@ def create_rtsp_pipeline(rtsp_url: str) -> Gst.Pipeline:
     nvvidconv = Gst.ElementFactory.make("nvvidconv", "nvvidconv-post")
     nvosd     = Gst.ElementFactory.make("nvdsosd",   "osd")
 
-    # ── 7. RTSP Output Chain ─────────────────────────────────────────────────
-    nvvidconv_out = Gst.ElementFactory.make("nvvidconv", "nvvidconv-out")
+    # ── 7. Scale output to smaller resolution (after OSD overlay) ───────────────
+    nvvidconv_scale = Gst.ElementFactory.make("nvvidconv", "nvvidconv-scale")
+    nvvidconv_scale.set_property("width",  OUTPUT_WIDTH)
+    nvvidconv_scale.set_property("height", OUTPUT_HEIGHT)
+
+    # ── 8. RTSP Output Chain ─────────────────────────────────────────────────
     caps_filter   = Gst.ElementFactory.make("capsfilter", "caps-filter")
     caps_filter.set_property("caps", Gst.Caps.from_string(
         "video/x-raw(memory:NVMM), format=I420"))
@@ -294,7 +302,7 @@ def create_rtsp_pipeline(rtsp_url: str) -> Gst.Pipeline:
     # ── Add all elements ─────────────────────────────────────────────────────
     for el in (rtspsrc, rtph264depay, h264parse, avdec, nvvidconv_src,
                streammux, pgie, tracker, nvvidconv, nvosd,
-               nvvidconv_out, caps_filter, encoder, rtph264pay, udpsink):
+               nvvidconv_scale, caps_filter, encoder, rtph264pay, udpsink):
         if el is None:
             sys.stderr.write(" Unable to create an element – check DeepStream installation\n")
         pipeline.add(el)
@@ -321,8 +329,8 @@ def create_rtsp_pipeline(rtsp_url: str) -> Gst.Pipeline:
     nvvidconv.link(nvosd)
 
     # ── Link: OSD → output chain → UDP sink ──────────────────────────────────
-    nvosd.link(nvvidconv_out)
-    nvvidconv_out.link(caps_filter)
+    nvosd.link(nvvidconv_scale)
+    nvvidconv_scale.link(caps_filter)
     caps_filter.link(encoder)
     encoder.link(rtph264pay)
     rtph264pay.link(udpsink)

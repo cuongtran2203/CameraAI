@@ -3,7 +3,7 @@
     <!-- Video Element -->
     <video
       ref="videoRef"
-      class="w-full h-full object-contain"
+      class="w-full h-full object-cover"
       controls
       playsinline
       muted
@@ -111,6 +111,69 @@ const isPlaying = ref(false)
 const error = ref(null)
 let hls = null
 
+/**
+ * Fetch HLS manifest and rewrite all URLs to be same-origin.
+ * This ensures segment requests go through nginx (no CORS, no 404).
+ *
+ * How it works:
+ * 1. Fetch the manifest from MediaMTX (returns URLs like "video1_stream.m3u8"
+ *    or "f867edc9c0c2_video1_seg22.mp4")
+ * 2. Detect the stream's base path from the manifest URL
+ * 3. Rewrite relative filenames to absolute URLs pointing through nginx
+ * 4. Return a Blob URL so hls.js can load the rewritten manifest
+ */
+const fetchAndRewriteManifest = async (manifestUrl) => {
+  const res = await fetch(manifestUrl)
+  if (!res.ok) throw new Error(`Failed to fetch manifest: ${res.status}`)
+  const text = await res.text()
+
+  // Determine the base path of the manifest for rewriting relative URLs
+  // e.g. "http://localhost:5173/hls/ds-test/video1_stream.m3u8"
+  //      → "http://localhost:5173/hls/ds-test/"
+  const url = new URL(manifestUrl)
+  const basePath = url.origin + url.pathname.replace(/\/[^/]+\.m3u8(\?.*)?$/, '/')
+
+  // Rewrite the manifest content:
+  // - Absolute URLs (http://localhost:8888/...) → keep as-is or strip port
+  // - Relative filenames → prepend basePath
+  const lines = text.split('\n')
+  const rewritten = lines.map(line => {
+    const trimmed = line.trim()
+
+    // Top-level master manifest: rewrite variant track names
+    if (trimmed.startsWith('#EXT-X-STREAM-INF:')) {
+      // Keep bandwidth/resolution attributes as-is
+      return line
+    }
+    if (trimmed.endsWith('.m3u8') && !trimmed.startsWith('#')) {
+      // Variant playlist URL — prepend basePath
+      const clean = trimmed.split('?')[0].split('#')[0]
+      return basePath + encodeURIComponent(clean)
+    }
+
+    // Second-level manifest: rewrite segment filenames
+    // Patterns: *_init.mp4, *_seg[N].mp4, *_part[N].mp4, gap.mp4
+    if (trimmed.endsWith('.mp4') && !trimmed.startsWith('#')) {
+      // Strip query params, rewrite filename
+      const clean = trimmed.split('?')[0].split('#')[0]
+      return basePath + encodeURIComponent(clean)
+    }
+
+    // URI= attributes inside #EXT-X-MAP and #EXT-X-PART tags
+    if (trimmed.startsWith('URI="') && trimmed.endsWith('.mp4"')) {
+      const match = trimmed.match(/^URI="(.+?)"(.+)?$/)
+      if (match) {
+        const clean = match[1].split('?')[0]
+        return `URI="${basePath}${encodeURIComponent(clean)}"${match[2] || ''}`
+      }
+    }
+
+    return line
+  }).join('\n')
+
+  return URL.createObjectURL(new Blob([rewritten], { type: 'application/vnd.apple.mpegurl' }))
+}
+
 // Initialize video player
 const initPlayer = () => {
   if (!videoRef.value) return
@@ -135,26 +198,34 @@ const initPlayer = () => {
   // Check if HLS stream
   if (streamUrl.includes('.m3u8') || streamUrl.includes('hls')) {
     if (Hls.isSupported()) {
-      hls = new Hls({
-        enableWorker: true,
-        lowLatencyMode: true,
-        backBufferLength: 90
-      })
-      hls.loadSource(streamUrl)
-      hls.attachMedia(video)
-      hls.on(Hls.Events.MANIFEST_PARSED, () => {
-        isLoading.value = false
-        video.play().catch(() => {
-          // Autoplay blocked - user interaction required
+      // Fetch manifest, rewrite URLs to same-origin, load as Blob
+      // This avoids CORS issues and URL path rewriting problems
+      fetchAndRewriteManifest(streamUrl).then(rewrittenUrl => {
+        hls = new Hls({
+          enableWorker: true,
+          lowLatencyMode: true,
+          backBufferLength: 90
         })
-      })
-      hls.on(Hls.Events.ERROR, (event, data) => {
-        if (data.fatal) {
-          handleError(data)
-        }
+        hls.loadSource(rewrittenUrl)
+        hls.attachMedia(video)
+        hls.on(Hls.Events.MANIFEST_PARSED, () => {
+          isLoading.value = false
+          video.play().catch(() => {
+            // Autoplay blocked - user interaction required
+          })
+        })
+        hls.on(Hls.Events.ERROR, (event, data) => {
+          if (data.fatal) {
+            handleError(data)
+          }
+        })
+      }).catch(err => {
+        error.value = 'Failed to load stream manifest'
+        isLoading.value = false
+        console.error('Manifest fetch error:', err)
       })
     } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-      // Native HLS support (Safari)
+      // Native HLS support (Safari) — can use URL directly
       video.src = streamUrl
       video.addEventListener('loadedmetadata', () => {
         isLoading.value = false

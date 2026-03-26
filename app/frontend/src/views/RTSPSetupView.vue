@@ -58,47 +58,44 @@
                     class="w-72 border-r border-primary/20 bg-background-light dark:bg-background-dark p-6 flex flex-col gap-6 min-h-0">
                     <div class="flex flex-col gap-1">
                         <h1 class="text-slate-900 dark:text-slate-100 text-lg font-bold">Camera List</h1>
-                        <p class="text-primary text-sm font-medium">5 Online • 2 Offline</p>
+                        <p class="text-primary text-sm font-medium">
+                            {{ onlineCount }} Online • {{ offlineCount }} Offline
+                        </p>
                     </div>
+                    <div v-if="camerasError" class="text-red-400 text-xs px-2">{{ camerasError }}</div>
                     <div class="flex flex-col gap-2 overflow-y-auto pr-2 custom-scrollbar">
+                        <!-- AI Stream: DeepStream processed output -->
                         <div
-                            class="flex items-center gap-3 px-4 py-3 rounded-xl bg-primary text-white shadow-lg shadow-primary/20">
-                            <span class="material-symbols-outlined">videocam</span>
+                            class="flex items-center gap-3 px-4 py-3 rounded-xl border border-primary/40 hover:bg-primary/10 transition-colors cursor-pointer group"
+                            :class="selectedStreamTab === 'ai' ? 'bg-primary text-white shadow-lg shadow-primary/20' : ''"
+                            @click="selectedStreamTab = 'ai'; stopStream(); connectDeepStream()">
+                            <span class="material-symbols-outlined">psychology</span>
                             <div class="flex flex-col">
-                                <p class="text-sm font-bold">Main Entrance</p>
-                                <p class="text-[10px] opacity-80 uppercase tracking-wider font-semibold">Recording</p>
+                                <p class="text-sm font-bold">AI Processed Stream</p>
+                                <p class="text-[10px] opacity-80 uppercase tracking-wider font-semibold">DeepStream YOLO</p>
                             </div>
+                            <span class="ml-auto material-symbols-outlined text-xs opacity-60">smart_toy</span>
                         </div>
-                        <div
-                            class="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-primary/10 transition-colors cursor-pointer group">
-                            <span
-                                class="material-symbols-outlined text-slate-500 group-hover:text-primary">videocam</span>
-                            <p class="text-slate-700 dark:text-slate-300 text-sm font-medium">Lobby North</p>
+                        <!-- Camera streams -->
+                        <div v-if="isLoadingCameras" class="flex items-center gap-2 px-4 py-3 text-slate-400 text-xs">
+                            <span class="material-symbols-outlined animate-spin">progress_activity</span>
+                            Đang tải...
                         </div>
-                        <div
-                            class="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-primary/10 transition-colors cursor-pointer group">
-                            <span
-                                class="material-symbols-outlined text-slate-500 group-hover:text-primary">videocam</span>
-                            <p class="text-slate-700 dark:text-slate-300 text-sm font-medium">Parking Gate 1</p>
-                        </div>
-                        <div
-                            class="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-primary/10 transition-colors cursor-pointer group">
-                            <span
-                                class="material-symbols-outlined text-slate-500 group-hover:text-primary">videocam_off</span>
-                            <p class="text-slate-400 dark:text-slate-500 text-sm font-medium italic">Warehouse A
-                                (Offline)</p>
-                        </div>
-                        <div
-                            class="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-primary/10 transition-colors cursor-pointer group">
-                            <span
-                                class="material-symbols-outlined text-slate-500 group-hover:text-primary">videocam</span>
-                            <p class="text-slate-700 dark:text-slate-300 text-sm font-medium">Exit West</p>
-                        </div>
-                        <div
-                            class="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-primary/10 transition-colors cursor-pointer group">
-                            <span
-                                class="material-symbols-outlined text-slate-500 group-hover:text-primary">videocam</span>
-                            <p class="text-slate-700 dark:text-slate-300 text-sm font-medium">Breakroom</p>
+                        <div v-for="camera in cameras" :key="camera.id"
+                            class="flex items-center gap-3 px-4 py-3 rounded-xl transition-colors cursor-pointer group"
+                            :class="selectedCameraId === camera.id && selectedStreamTab === 'camera'
+                                ? 'bg-primary text-white shadow-lg shadow-primary/20'
+                                : 'hover:bg-primary/10'"
+                            @click="selectCamera(camera)">
+                            <span :class="['material-symbols-outlined', camera.is_active === false ? 'text-slate-500' : '']">
+                                {{ camera.is_active !== false ? 'videocam' : 'videocam_off' }}
+                            </span>
+                            <div class="flex flex-col min-w-0">
+                                <p class="text-sm font-bold truncate">{{ camera.name || camera.code }}</p>
+                                <p class="text-[10px] opacity-80 uppercase tracking-wider font-semibold">
+                                    {{ camera.is_active !== false ? 'Recording' : 'Offline' }}
+                                </p>
+                            </div>
                         </div>
                     </div>
                     <button
@@ -116,8 +113,6 @@
                                 Configuration</h2>
                             <div class="flex items-center gap-2">
                                 <span class="size-2 rounded-full bg-green-500 animate-pulse"></span>
-                                <p class="text-slate-500 dark:text-primary/60 text-sm font-medium">Main Entrance - 4K IP
-                                    Stream (192.168.1.104)</p>
                             </div>
                         </div>
                         <div class="flex gap-3">
@@ -125,7 +120,7 @@
                                 class="flex items-center justify-center rounded-xl h-11 px-6 bg-slate-200 dark:bg-primary/10 text-slate-700 dark:text-slate-300 text-sm font-bold hover:bg-primary/20 transition-all">
                                 Cancel
                             </button>
-                            <button @click="saveCamera"
+                            <button v-if="selectedStreamTab !== 'ai'" @click="saveCamera"
                                 class="flex items-center justify-center rounded-xl h-11 px-8 bg-primary text-white text-sm font-bold hover:brightness-110 shadow-lg shadow-primary/30 transition-all">
                                 Save Changes
                             </button>
@@ -156,101 +151,146 @@
                             <!-- Left: ROI and Video Preview -->
                             <div class="flex-1 flex flex-col gap-6 overflow-y-auto custom-scrollbar h-full">
                                 <div class="bg-slate-900 dark:bg-black rounded-2xl overflow-hidden relative border border-primary/30 shadow-2xl shrink-0">
-                                    <!-- Video Feed (Real Stream) -->
-                                    <div class="aspect-video w-full bg-slate-900 flex items-center justify-center relative group">
-                                        <!-- Loading overlay -->
-                                        <div v-if="isLoading" class="absolute inset-0 flex items-center justify-center z-10 bg-slate-900/80">
-                                            <div class="flex flex-col items-center gap-3">
-                                                <span class="material-symbols-outlined text-5xl text-primary animate-spin">progress_activity</span>
-                                                <span class="text-white text-sm font-bold">Đang kết nối camera...</span>
+                                    <!-- Video Feed (Real Stream or AI Processed) -->
+                                    <div class="w-full aspect-square max-h-[480px] mx-auto bg-slate-900 flex items-center justify-center relative group">
+
+                                        <!-- ── AI Stream ── -->
+                                        <template v-if="selectedStreamTab === 'ai'">
+                                            <!-- Loading -->
+                                            <div v-if="deepstreamLoading" class="absolute inset-0 flex items-center justify-center z-10 bg-slate-900/80">
+                                                <div class="flex flex-col items-center gap-3">
+                                                    <span class="material-symbols-outlined text-5xl text-primary animate-spin">progress_activity</span>
+                                                    <span class="text-white text-sm font-bold">Đang kết nối AI stream...</span>
+                                                </div>
                                             </div>
-                                        </div>
-                                        <!-- Error overlay -->
-                                        <div v-else-if="errorMsg && !isConnected" class="absolute inset-0 flex items-center justify-center z-10 bg-slate-900/80">
-                                            <div class="flex flex-col items-center gap-3 text-center px-8">
-                                                <span class="material-symbols-outlined text-5xl text-red-400">videocam_off</span>
-                                                <span class="text-red-400 text-sm font-bold">{{ errorMsg }}</span>
-                                                <button @click="connectStream"
-                                                    class="px-4 py-2 bg-red-500/20 border border-red-500/40 text-red-400 rounded-lg text-xs font-bold hover:bg-red-500/30 transition-all">
-                                                    Thử lại
-                                                </button>
+                                            <!-- Error -->
+                                            <div v-else-if="deepstreamError && !deepstreamConnected" class="absolute inset-0 flex items-center justify-center z-10 bg-slate-900/80">
+                                                <div class="flex flex-col items-center gap-3 text-center px-8">
+                                                    <span class="material-symbols-outlined text-5xl text-red-400">smart_toy</span>
+                                                    <span class="text-red-400 text-sm font-bold">{{ deepstreamError }}</span>
+                                                    <button @click="connectDeepStream"
+                                                        class="px-4 py-2 bg-red-500/20 border border-red-500/40 text-red-400 rounded-lg text-xs font-bold hover:bg-red-500/30 transition-all">
+                                                        Thử lại
+                                                    </button>
+                                                </div>
                                             </div>
-                                        </div>
-                                        <!-- Video element -->
-                                        <video
-                                            ref="videoRef"
-                                            class="w-full h-full object-cover"
-                                            :class="{ 'opacity-0': !isConnected }"
-                                            autoplay
-                                            muted
-                                            playsinline
-                                            controls></video>
-                                        <!-- Idle state (no stream) -->
-                                        <div v-if="!isConnected && !isLoading && !errorMsg" class="absolute inset-0 flex flex-col items-center justify-center gap-3">
-                                            <span class="material-symbols-outlined text-6xl text-slate-600">videocam_off</span>
-                                            <span class="text-slate-500 text-sm">Chưa kết nối camera</span>
-                                            <button @click="connectStream"
-                                                class="px-4 py-2 bg-primary/20 border border-primary/40 text-primary rounded-lg text-xs font-bold hover:bg-primary/30 transition-all">
-                                                Kết nối
-                                            </button>
-                                        </div>
-                                        <!-- Drawing Overlay Mockup -->
-                                        <svg class="absolute inset-0 w-full h-full pointer-events-none">
-                                            <!-- Existing ROI 1 -->
-                                            <polygon fill="rgba(236, 91, 19, 0.2)" points="100,100 400,120 450,300 150,350"
-                                                stroke="#ec5b13" stroke-dasharray="8 4" stroke-width="3"></polygon>
-                                            <circle cx="100" cy="100" fill="#ec5b13" r="6"></circle>
-                                            <circle cx="400" cy="120" fill="#ec5b13" r="6"></circle>
-                                            <circle cx="450" cy="300" fill="#ec5b13" r="6"></circle>
-                                            <circle cx="150" cy="350" fill="#ec5b13" r="6"></circle>
-                                            <text fill="#ec5b13" font-size="14" font-weight="bold" x="110" y="90">Entrance ROI</text>
-                                            <!-- Tooltip/Active Point -->
-                                            <circle cx="600" cy="200" fill="white" r="8" stroke="#ec5b13" stroke-width="2"></circle>
-                                        </svg>
-                                        <!-- Tool HUD -->
-                                        <div class="absolute top-4 left-4 flex gap-2">
-                                            <div class="bg-slate-900/80 backdrop-blur-md rounded-lg p-1 flex gap-1 border border-primary/30">
-                                                <button class="p-2 bg-primary text-white rounded-md flex items-center justify-center">
-                                                    <span class="material-symbols-outlined text-sm">draw</span>
-                                                </button>
-                                                <button class="p-2 text-slate-300 hover:bg-slate-700 rounded-md flex items-center justify-center">
-                                                    <span class="material-symbols-outlined text-sm">rectangle</span>
-                                                </button>
-                                                <button class="p-2 text-slate-300 hover:bg-slate-700 rounded-md flex items-center justify-center">
-                                                    <span class="material-symbols-outlined text-sm">circle</span>
-                                                </button>
-                                                <div class="w-px bg-primary/20 mx-1"></div>
-                                                <button class="p-2 text-red-500 hover:bg-red-500/10 rounded-md flex items-center justify-center">
-                                                    <span class="material-symbols-outlined text-sm">delete</span>
+                                            <!-- Idle -->
+                                            <div v-if="!deepstreamConnected && !deepstreamLoading && !deepstreamError"
+                                                class="absolute inset-0 flex flex-col items-center justify-center gap-3 z-10">
+                                                <span class="material-symbols-outlined text-6xl text-slate-600">psychology</span>
+                                                <span class="text-slate-500 text-sm">AI Processed Stream</span>
+                                                <button @click="connectDeepStream"
+                                                    class="px-4 py-2 bg-primary/20 border border-primary/40 text-primary rounded-lg text-xs font-bold hover:bg-primary/30 transition-all">
+                                                    Kết nối AI Stream
                                                 </button>
                                             </div>
-                                            <div class="bg-slate-900/80 backdrop-blur-md rounded-lg px-3 py-2 flex items-center gap-2 border border-primary/30 text-[10px] font-bold text-primary uppercase tracking-widest">
+                                            <!-- Video -->
+                                            <video ref="deepstreamVideoRef"
+                                                class="w-full h-full object-cover"
+                                                :class="{ 'opacity-0': !deepstreamConnected }"
+                                                autoplay muted playsinline controls></video>
+                                            <!-- Live badge -->
+                                            <div v-if="deepstreamConnected"
+                                                class="absolute top-4 left-4 bg-slate-900/80 backdrop-blur-md rounded-lg px-3 py-2 flex items-center gap-2 border border-primary/30 text-[10px] font-bold text-primary uppercase tracking-widest">
                                                 <span class="relative flex h-2 w-2">
                                                     <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
                                                     <span class="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
                                                 </span>
-                                                Live Stream
+                                                AI Live
                                             </div>
-                                        </div>
-                                        <!-- Bottom Controls -->
-                                        <div class="absolute bottom-4 right-4 flex gap-2">
-                                            <button class="bg-slate-900/80 backdrop-blur-md p-2 rounded-lg text-white border border-primary/20 hover:bg-primary/20 transition-colors">
-                                                <span class="material-symbols-outlined">zoom_in</span>
-                                            </button>
-                                            <button class="bg-slate-900/80 backdrop-blur-md p-2 rounded-lg text-white border border-primary/20 hover:bg-primary/20 transition-colors">
-                                                <span class="material-symbols-outlined">fullscreen</span>
-                                            </button>
-                                        </div>
+                                        </template>
+
+                                        <!-- ── Camera Stream ── -->
+                                        <template v-else>
+                                            <!-- Loading overlay -->
+                                            <div v-if="isLoading" class="absolute inset-0 flex items-center justify-center z-10 bg-slate-900/80">
+                                                <div class="flex flex-col items-center gap-3">
+                                                    <span class="material-symbols-outlined text-5xl text-primary animate-spin">progress_activity</span>
+                                                    <span class="text-white text-sm font-bold">Đang kết nối camera...</span>
+                                                </div>
+                                            </div>
+                                            <!-- Error overlay -->
+                                            <div v-else-if="errorMsg && !isConnected" class="absolute inset-0 flex items-center justify-center z-10 bg-slate-900/80">
+                                                <div class="flex flex-col items-center gap-3 text-center px-8">
+                                                    <span class="material-symbols-outlined text-5xl text-red-400">videocam_off</span>
+                                                    <span class="text-red-400 text-sm font-bold">{{ errorMsg }}</span>
+                                                    <button @click="connectStream"
+                                                        class="px-4 py-2 bg-red-500/20 border border-red-500/40 text-red-400 rounded-lg text-xs font-bold hover:bg-red-500/30 transition-all">
+                                                        Thử lại
+                                                    </button>
+                                                </div>
+                                            </div>
+                                            <!-- Video element -->
+                                            <video ref="videoRef"
+                                                class="w-full h-full object-cover"
+                                                :class="{ 'opacity-0': !isConnected }"
+                                                autoplay muted playsinline controls></video>
+                                            <!-- Idle state (no stream) -->
+                                            <div v-if="!isConnected && !isLoading && !errorMsg" class="absolute inset-0 flex flex-col items-center justify-center gap-3">
+                                                <span class="material-symbols-outlined text-6xl text-slate-600">videocam_off</span>
+                                                <span class="text-slate-500 text-sm">Chưa kết nối camera</span>
+                                                <button @click="connectStream"
+                                                    class="px-4 py-2 bg-primary/20 border border-primary/40 text-primary rounded-lg text-xs font-bold hover:bg-primary/30 transition-all">
+                                                    Kết nối
+                                                </button>
+                                            </div>
+                                            <!-- Drawing Overlay Mockup -->
+                                            <svg class="absolute inset-0 w-full h-full pointer-events-none">
+                                                <polygon fill="rgba(236, 91, 19, 0.2)" points="100,100 400,120 450,300 150,350"
+                                                    stroke="#ec5b13" stroke-dasharray="8 4" stroke-width="3"></polygon>
+                                                <circle cx="100" cy="100" fill="#ec5b13" r="6"></circle>
+                                                <circle cx="400" cy="120" fill="#ec5b13" r="6"></circle>
+                                                <circle cx="450" cy="300" fill="#ec5b13" r="6"></circle>
+                                                <circle cx="150" cy="350" fill="#ec5b13" r="6"></circle>
+                                                <text fill="#ec5b13" font-size="14" font-weight="bold" x="110" y="90">Entrance ROI</text>
+                                                <circle cx="600" cy="200" fill="white" r="8" stroke="#ec5b13" stroke-width="2"></circle>
+                                            </svg>
+                                            <!-- Tool HUD -->
+                                            <div class="absolute top-4 left-4 flex gap-2">
+                                                <div class="bg-slate-900/80 backdrop-blur-md rounded-lg p-1 flex gap-1 border border-primary/30">
+                                                    <button class="p-2 bg-primary text-white rounded-md flex items-center justify-center">
+                                                        <span class="material-symbols-outlined text-sm">draw</span>
+                                                    </button>
+                                                    <button class="p-2 text-slate-300 hover:bg-slate-700 rounded-md flex items-center justify-center">
+                                                        <span class="material-symbols-outlined text-sm">rectangle</span>
+                                                    </button>
+                                                    <button class="p-2 text-slate-300 hover:bg-slate-700 rounded-md flex items-center justify-center">
+                                                        <span class="material-symbols-outlined text-sm">circle</span>
+                                                    </button>
+                                                    <div class="w-px bg-primary/20 mx-1"></div>
+                                                    <button class="p-2 text-red-500 hover:bg-red-500/10 rounded-md flex items-center justify-center">
+                                                        <span class="material-symbols-outlined text-sm">delete</span>
+                                                    </button>
+                                                </div>
+                                                <div v-if="isConnected"
+                                                    class="bg-slate-900/80 backdrop-blur-md rounded-lg px-3 py-2 flex items-center gap-2 border border-primary/30 text-[10px] font-bold text-primary uppercase tracking-widest">
+                                                    <span class="relative flex h-2 w-2">
+                                                        <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
+                                                        <span class="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
+                                                    </span>
+                                                    Live Stream
+                                                </div>
+                                            </div>
+                                            <!-- Bottom Controls -->
+                                            <div class="absolute bottom-4 right-4 flex gap-2">
+                                                <button class="bg-slate-900/80 backdrop-blur-md p-2 rounded-lg text-white border border-primary/20 hover:bg-primary/20 transition-colors">
+                                                    <span class="material-symbols-outlined">zoom_in</span>
+                                                </button>
+                                                <button class="bg-slate-900/80 backdrop-blur-md p-2 rounded-lg text-white border border-primary/20 hover:bg-primary/20 transition-colors">
+                                                    <span class="material-symbols-outlined">fullscreen</span>
+                                                </button>
+                                            </div>
+                                        </template>
                                     </div>
                                 </div>
-                                <div class="flex items-start gap-4 p-4 bg-primary/5 border border-primary/20 rounded-xl shrink-0">
+                                <div v-if="selectedStreamTab !== 'ai'" class="flex items-start gap-4 p-4 bg-primary/5 border border-primary/20 rounded-xl shrink-0">
                                     <span class="material-symbols-outlined text-primary">info</span>
                                     <div>
                                         <p class="text-sm font-bold text-slate-900 dark:text-slate-100">ROI Configuration Tip</p>
                                         <p class="text-xs text-slate-600 dark:text-slate-400 mt-1">Drawing specific Regions of Interest (ROI) helps the AI focus on critical areas like entrances or registers, reducing false positives and saving processing power.</p>
                                     </div>
                                 </div>
-                                <div class="bg-background-light dark:bg-background-dark p-6 rounded-2xl border border-primary/20 shadow-sm flex flex-col gap-6 shrink-0">
+                                <div v-if="selectedStreamTab !== 'ai'" class="bg-background-light dark:bg-background-dark p-6 rounded-2xl border border-primary/20 shadow-sm flex flex-col gap-6 shrink-0">
                                     <div>
                                         <h3 class="text-lg font-bold text-slate-900 dark:text-slate-100 mb-4 flex items-center gap-2">
                                             <span class="material-symbols-outlined text-primary">lan</span>
@@ -393,9 +433,9 @@
 </template>
 
 <script setup>
-import { ref, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import Hls from 'hls.js'
-import { MEDIAMTX_URL } from '@/config/api.js'
+import { API_BASE_URL, MEDIAMTX_URL } from '@/config/api.js'
 
 // --- State ---
 const videoRef = ref(null)
@@ -404,17 +444,98 @@ const isLoading = ref(false)
 const isConnected = ref(false)
 const errorMsg = ref('')
 const cameraName = ref('Camera 1')
+const selectedStreamTab = ref('camera') // 'camera' | 'ai'
+const cameras = ref([])
+const selectedCameraId = ref(null)
+const isLoadingCameras = ref(false)
+const camerasError = ref('')
+const deepstreamConnected = ref(false)
+const deepstreamLoading = ref(false)
+const deepstreamError = ref('')
+const deepstreamVideoRef = ref(null)
 let hlsInstance = null
+let dsHlsInstance = null
+let camerasRefreshTimer = null
 
-// --- Convert RTSP URL → HLS stream name ---
+// Auth token from localStorage
+const getToken = () => localStorage.getItem('auth_token') || ''
+
+// --- Fetch cameras from backend API ---
+const fetchCameras = async () => {
+  try {
+    const res = await fetch(`${API_BASE_URL}/v1/cameras?page_size=50`, {
+      headers: { Authorization: `Bearer ${getToken()}` }
+    })
+    if (!res.ok) throw new Error('Failed to fetch cameras')
+    cameras.value = await res.json()
+    camerasError.value = ''
+  } catch (e) {
+    camerasError.value = 'Không thể tải danh sách camera'
+    console.error(e)
+  }
+}
+
+// --- Select a camera ---
+const selectCamera = (camera) => {
+  selectedCameraId.value = camera.id
+  cameraName.value = camera.name || camera.code || 'Camera'
+  rtspUrl.value = camera.rtsp_url || ''
+  isConnected.value = false
+  isLoading.value = false
+  errorMsg.value = ''
+  stopStream()
+  // Auto-connect if RTSP URL available
+  if (rtspUrl.value) {
+    setTimeout(() => connectStream(), 200)
+  }
+}
+
+// --- Convert input URL to playable HLS URL ---
 const getStreamName = (url) => {
-  // Encode RTSP URL to safe stream name (base64, no special chars)
-  return btoa(url).replace(/[/+=]/g, '_')
+  return btoa(encodeURIComponent(url)).replace(/[/+=]/g, '_')
+}
+
+const toFrontendHlsProxy = (pathname) => {
+  // If path already starts with /hls/, don't double-prefix
+  const cleanPath = pathname.replace(/^\//, '')
+  if (cleanPath.startsWith('hls/')) {
+    return `${window.location.origin}/${cleanPath}`
+  }
+  return `${window.location.origin}/hls/${cleanPath}`
+}
+
+const normalizeExistingHlsUrl = (url) => {
+  try {
+    const u = new URL(url)
+    // Common old format: http://localhost:8888/ds-test/hls.m3u8
+    if (u.pathname.endsWith('/hls.m3u8')) {
+      return toFrontendHlsProxy(u.pathname.replace('/hls.m3u8', '/index.m3u8'))
+    }
+    // MediaMTX canonical format: /<path>/index.m3u8
+    if (u.pathname.endsWith('/index.m3u8') || u.pathname.endsWith('.m3u8')) {
+      return toFrontendHlsProxy(u.pathname)
+    }
+  } catch (_) {
+    // not a full URL, fallback below
+  }
+  return null
 }
 
 const getHlsUrl = (url) => {
+  // If user already entered an HLS URL, normalize it to frontend proxy path
+  if (url?.includes('.m3u8')) {
+    const normalized = normalizeExistingHlsUrl(url)
+    if (normalized) return normalized
+  }
+
+  // Otherwise treat as RTSP-like source and map to MediaMTX on-demand path
   const streamName = getStreamName(url)
-  return `${MEDIAMTX_URL}/${streamName}/hls.m3u8`
+  return toFrontendHlsProxy(`/${streamName}/index.m3u8`)
+}
+
+// --- DeepStream AI-processed stream URL ---
+const getDeepStreamHlsUrl = () => {
+  return toFrontendHlsProxy('/ds-test/index.m3u8')
 }
 
 // --- Stop current stream ---
@@ -425,10 +546,27 @@ const stopStream = () => {
   }
   if (videoRef.value) {
     videoRef.value.src = ''
+    videoRef.value.removeAttribute('src')
+    videoRef.value.load()
   }
   isConnected.value = false
   isLoading.value = false
   errorMsg.value = ''
+}
+
+const stopDeepStream = () => {
+  if (dsHlsInstance) {
+    dsHlsInstance.destroy()
+    dsHlsInstance = null
+  }
+  if (deepstreamVideoRef.value) {
+    deepstreamVideoRef.value.src = ''
+    deepstreamVideoRef.value.removeAttribute('src')
+    deepstreamVideoRef.value.load()
+  }
+  deepstreamConnected.value = false
+  deepstreamLoading.value = false
+  deepstreamError.value = ''
 }
 
 // --- Connect to RTSP stream via MediaMTX ---
@@ -437,7 +575,6 @@ const connectStream = async () => {
     errorMsg.value = 'Vui lòng nhập RTSP URL'
     return
   }
-
   if (!videoRef.value) {
     errorMsg.value = 'Video player chưa sẵn sàng'
     return
@@ -448,11 +585,8 @@ const connectStream = async () => {
   errorMsg.value = ''
 
   const hlsUrl = getHlsUrl(rtspUrl.value)
-
-  // Wait for MediaMTX to be ready (it auto-pulls when someone connects via HLS)
   await new Promise(resolve => setTimeout(resolve, 1500))
 
-  // Try native HLS first (Safari)
   if (videoRef.value.canPlayType('application/vnd.apple.mpegurl')) {
     videoRef.value.src = hlsUrl
     videoRef.value.addEventListener('loadedmetadata', () => {
@@ -463,7 +597,6 @@ const connectStream = async () => {
     videoRef.value.addEventListener('error', tryHlsJs, { once: true })
     return
   }
-
   tryHlsJs()
 }
 
@@ -473,23 +606,15 @@ const tryHlsJs = () => {
     isLoading.value = false
     return
   }
-
   const hlsUrl = getHlsUrl(rtspUrl.value)
-  hlsInstance = new Hls({
-    enableWorker: true,
-    lowLatencyMode: true,
-    backBufferLength: 30,
-  })
-
+  hlsInstance = new Hls({ enableWorker: true, lowLatencyMode: true, backBufferLength: 30 })
   hlsInstance.loadSource(hlsUrl)
   hlsInstance.attachMedia(videoRef.value)
-
   hlsInstance.on(Hls.Events.MANIFEST_PARSED, () => {
     isLoading.value = false
     isConnected.value = true
     videoRef.value.play().catch(() => {})
   })
-
   hlsInstance.on(Hls.Events.ERROR, (_, data) => {
     if (data.fatal) {
       errorMsg.value = `Lỗi stream: ${data.details || 'Không thể kết nối camera'}`
@@ -499,22 +624,115 @@ const tryHlsJs = () => {
   })
 }
 
-// --- Save camera to localStorage ---
-const saveCamera = () => {
+// --- Connect to DeepStream AI-processed stream ---
+const connectDeepStream = async () => {
+  if (!deepstreamVideoRef.value) return
+  stopDeepStream()
+  deepstreamLoading.value = true
+  deepstreamError.value = ''
+  const hlsUrl = getDeepStreamHlsUrl()
+  await new Promise(resolve => setTimeout(resolve, 2000))
+  if (deepstreamVideoRef.value.canPlayType('application/vnd.apple.mpegurl')) {
+    deepstreamVideoRef.value.src = hlsUrl
+    deepstreamVideoRef.value.addEventListener('loadedmetadata', () => {
+      deepstreamLoading.value = false
+      deepstreamConnected.value = true
+      deepstreamVideoRef.value.play().catch(() => {})
+    }, { once: true })
+    deepstreamVideoRef.value.addEventListener('error', tryDsHlsJs, { once: true })
+    return
+  }
+  tryDsHlsJs()
+}
+
+const tryDsHlsJs = () => {
+  if (!Hls.isSupported()) {
+    deepstreamError.value = 'Trình duyệt không hỗ trợ HLS'
+    deepstreamLoading.value = false
+    return
+  }
+  const hlsUrl = getDeepStreamHlsUrl()
+  dsHlsInstance = new Hls({ enableWorker: true, lowLatencyMode: true, backBufferLength: 30 })
+  dsHlsInstance.loadSource(hlsUrl)
+  dsHlsInstance.attachMedia(deepstreamVideoRef.value)
+  dsHlsInstance.on(Hls.Events.MANIFEST_PARSED, () => {
+    deepstreamLoading.value = false
+    deepstreamConnected.value = true
+    deepstreamVideoRef.value.play().catch(() => {})
+  })
+  dsHlsInstance.on(Hls.Events.ERROR, (_, data) => {
+    if (data.fatal) {
+      deepstreamError.value = `Lỗi stream: ${data.details || 'Không thể kết nối AI stream'}`
+      deepstreamLoading.value = false
+      deepstreamConnected.value = false
+    }
+  })
+}
+
+// --- Save camera to backend API ---
+const saveCamera = async () => {
   if (!rtspUrl.value.trim() || !cameraName.value.trim()) {
     errorMsg.value = 'Vui lòng nhập đầy đủ thông tin'
     return
   }
-  const cameras = JSON.parse(localStorage.getItem('rtsp_cameras') || '[]')
-  const id = Date.now()
-  cameras.push({ id, name: cameraName.value, rtspUrl: rtspUrl.value })
-  localStorage.setItem('rtsp_cameras', JSON.stringify(cameras))
-  alert(`Đã lưu camera "${cameraName.value}" thành công!`)
+  try {
+    // Use existing camera's branch_id if available, otherwise use default
+    const existingCamera = cameras.value.find(c => c.id === selectedCameraId.value)
+    const branchId = existingCamera?.branch_id || '00000000-0000-0000-0000-000000000001'
+
+    if (selectedCameraId.value && existingCamera) {
+      // Update existing camera
+      const res = await fetch(`${API_BASE_URL}/v1/cameras/${selectedCameraId.value}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${getToken()}`
+        },
+        body: JSON.stringify({
+          name: cameraName.value,
+          rtsp_url: rtspUrl.value,
+        })
+      })
+      if (!res.ok) throw new Error('Failed to update camera')
+    } else {
+      // Create new camera
+      const res = await fetch(`${API_BASE_URL}/v1/cameras`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${getToken()}`
+        },
+        body: JSON.stringify({
+          name: cameraName.value,
+          code: `CAM-${Date.now()}`,
+          rtsp_url: rtspUrl.value,
+          branch_id: branchId,
+          stream_type: rtspUrl.value?.includes('.m3u8') ? 'hls' : 'rtsp',
+          ai_enabled: { face: true, action: true, food: true }
+        })
+      })
+      if (!res.ok) throw new Error('Failed to save camera')
+    }
+    await fetchCameras()
+    alert(`Đã lưu camera "${cameraName.value}" thành công!`)
+  } catch (e) {
+    alert(`Lỗi khi lưu: ${e.message}`)
+  }
 }
 
-// Cleanup on unmount
+// Online camera count
+const onlineCount = computed(() => cameras.value.filter(c => c.is_active !== false).length)
+const offlineCount = computed(() => cameras.value.filter(c => c.is_active === false).length)
+
+onMounted(() => {
+  fetchCameras()
+  camerasRefreshTimer = setInterval(fetchCameras, 30000)
+})
+
 onUnmounted(() => {
   stopStream()
+  stopDeepStream()
+  if (camerasRefreshTimer) clearInterval(camerasRefreshTimer)
 })
 </script>
 

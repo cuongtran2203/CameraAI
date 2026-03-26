@@ -237,6 +237,7 @@ def analyze_food_image(image: Image.Image) -> Dict[str, Any]:
     image_vec = encode_image(image)
     dense_vec = encode_text(dense_caption)
     sparse_vec = encode_text(sparse_caption)
+    ingredient_vecs = encode_text_list(ingredients)
 
     fused_vec = fuse_features(image_vec, dense_vec, sparse_vec)
 
@@ -247,4 +248,5 @@ def analyze_food_image(image: Image.Image) -> Dict[str, Any]:
         "dense_vec": dense_vec,
         "sparse_vec": sparse_vec,
         "fused_vec": fused_vec,
+        "ingredient_vecs": ingredient_vecs,
     }

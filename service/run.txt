@@ -1,0 +1,9 @@
+Run at Service
+
+# For DEEPSTREAM
+docker compose -f Human_detect_rtsp/docker-compose.yml up --build
+docker compose -f Human_detect_rtsp/docker-compose.yml down --build
+
+# For service
+docker compose -f docker-compose.yml up --build
+docker compose -f docker-compose.yml down --build

@@ -24,9 +24,9 @@ def _load_dotenv(dotenv_path: str | Path = ".env") -> None:
             os.environ[key] = val
 
 
-# Load environment variables from `.env` located in the `src/` package root.
-# This keeps all runtime configuration within the source tree.
-_load_dotenv("/home/app/Config/.env")
+# Load environment variables from `.env` in the service root (works both locally and in Docker).
+# Respects already-set env vars (e.g. from docker-compose).
+_load_dotenv(Path(__file__).resolve().parent.parent / ".env")
 
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 VLM_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.0-flash")

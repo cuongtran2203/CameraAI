@@ -72,13 +72,8 @@ async def get_current_user(
     except JWTError:
         raise credentials_exception
 
-    # Try to find user - either by UUID or by the id string directly
-    try:
-        # Try UUID first
-        result = await db.execute(select(User).where(User.id == UUID(user_id)))
-    except ValueError:
-        # If not UUID, try to find by id string directly
-        result = await db.execute(select(User).where(User.id == user_id))
+    # Find user by id (stored as string in both DB and JWT)
+    result = await db.execute(select(User).where(User.id == user_id))
 
     user = result.scalar_one_or_none()
     if user is None:

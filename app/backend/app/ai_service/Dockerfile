@@ -29,5 +29,7 @@ RUN python -m pip install --upgrade pip \
 # Copy all files from the context (./app/ai_service) into /app
 COPY . .
 
-# Ensure main.py is at /app/main.py
+# Ensure images/ dir exists (StaticFiles requires it)
+RUN mkdir -p /app/ai_service/images
+
 CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]

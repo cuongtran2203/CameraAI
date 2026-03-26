@@ -20,7 +20,8 @@ from app.api import (
     staff_router,
     dashboard_router,
     food_router,
-    websocket_router
+    websocket_router,
+    system_router,
 )
 from app.api.websocket import simulate_ai_stream_updates
 from app.services.kafka_service import (
@@ -82,7 +83,6 @@ async def start_kafka_consumer():
         KafkaTopics.AI_ACTION_DETECTIONS: handle_action_detection,
         KafkaTopics.AI_FOOD_DETECTIONS: handle_food_detection,
         KafkaTopics.AI_CUSTOMER_DETECTIONS: handle_customer_detection,
-        KafkaTopics.AI_CUSTOMER_DETECTIONS: handle_human_detection,
     }
 
     # Start consuming in background
@@ -185,6 +185,7 @@ app.include_router(cameras_router, prefix="/api/v1")
 app.include_router(staff_router, prefix="/api/v1")
 app.include_router(dashboard_router, prefix="/api/v1")
 app.include_router(food_router, prefix="/api/v1")
+app.include_router(system_router, prefix="/api/v1")
 
 # WebSocket routes (no /api/v1 prefix)
 app.include_router(websocket_router)

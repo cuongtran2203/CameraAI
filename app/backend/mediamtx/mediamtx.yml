@@ -1,0 +1,26 @@
+# MediaMTX v1.17 Configuration
+# Converts RTSP streams to HLS for browser viewing
+
+logLevel: info
+logDestinations: [stdout]
+
+# HLS Configuration
+hlsAddress: ":8888"
+hlsSegmentDuration: 2s
+hlsSegmentMaxSize: 50M
+hlsAllowOrigins: ["*"]
+hlsAlwaysRemux: true
+hlsDirectory: /hls
+
+# WebRTC
+webrtcAddress: ":8889"
+
+# RTSP Configuration
+rtspAddress: ":8555"
+
+# Paths
+paths:
+  # DeepStream RTSP output → pull and serve as HLS
+  ds-test:
+    source: rtsp://deepstream:8554/ds-test
+    sourceOnDemand: false
