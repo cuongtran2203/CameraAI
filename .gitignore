@@ -1,0 +1,50 @@
+# Environment files (all .env files, any depth)
+.env
+.env.*
+.env.local
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyc
+*.egg-info/
+*.so
+
+# Node (app directory)
+app/node_modules/
+app/dist/
+
+# Docker volumes / runtime data
+mediamtx/hls/
+volumes/
+*.log
+
+# MediaMTX state / credentials
+mediamtx/mediamtx.yml
+# (uncomment above only if you want to exclude your mediamtx config from git)
+# Instead, prefer:
+# mediamtx/mediamtx.yml.example
+
+# DeepStream model files (large binaries)
+models/
+*.engine
+*.caffemodel
+*.prototxt
+*.uff
+
+# Video files
+videos/
+*.mp4
+*.avi
+*.mov
+*.mkv
+
+# CUDA cache
+.cache/
+.nv/
+
+# IDE
+.vscode/
+.idea/
+.DS_Store
+*.swp
